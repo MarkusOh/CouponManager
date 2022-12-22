@@ -1,5 +1,4 @@
 import AVFoundation
-import CodeScanner
 import PhotosUI
 import SwiftUI
 
@@ -104,7 +103,9 @@ extension ContentView {
             ForEach(dataProvider.allCoupons) { coupon in
                 HStack {
                     Spacer()
-                    BarcodeView(couponCode: coupon.code, barcodeType: coupon.barcodeType, moneyLeft: $dataProvider.allCoupons.first(where: { coupon.id == $0.id })!.balance)
+                    BarcodeView(coupon: coupon, balanceSetterHandler: { newBalance in
+                        dataProvider.setBalance(on: coupon, with: newBalance)
+                    })
                     Spacer()
                 }
             }

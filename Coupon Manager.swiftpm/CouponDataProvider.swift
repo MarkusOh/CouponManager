@@ -34,12 +34,17 @@ class CouponDataProvider: ObservableObject {
         }
     }
     
+    internal func setBalance(on coupon: Coupon, with newBalance: Double) {
+        let newCoupon = Coupon(id: coupon.id, code: coupon.code, balance: newBalance, expirationDate: coupon.expirationDate, barcodeType: coupon.barcodeType)
+        changeCoupon(coupon: newCoupon, index: allCoupons.firstIndex(where: { $0.id == coupon.id })!)
+    }
+    
     internal func create(coupon: Coupon) {
         allCoupons.insert(coupon, at: 0)
         saveCoupons()
     }
     
-    internal func changeCoupon(coupon: Coupon, index: Int) {
+    fileprivate func changeCoupon(coupon: Coupon, index: Int) {
         allCoupons[index] = coupon
         saveCoupons()
     }

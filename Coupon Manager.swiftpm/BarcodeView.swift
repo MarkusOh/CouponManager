@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct BarcodeView: View {
-    let couponCode: String
-    let barcodeType: String
-    @Binding var moneyLeft: Double
+    let coupon: Coupon
+    let balanceSetterHandler: (Double) -> Void
+    
     @State private var howMuchSpent = 0.0
     @State private var isMoneyEditViewOpen = false
     @FocusState var isFocused: Bool
@@ -18,23 +18,24 @@ struct BarcodeView: View {
                             .scaledToFit()
                             .frame(minWidth: geometry.size.width, minHeight: .zero)
                     }
-                    Text(couponCode)
+                    Text(coupon.code)
                         .font(.caption)
                         .frame(maxWidth: .infinity)
                 }
                 .frame(maxHeight: .infinity)
             })
             HStack {
-                Text("\(moneyLeft.formatted())원 남았습니다")
+                Text("\(coupon.balance.formatted())원 남았습니다")
                 Spacer()
                 Button { 
                     isMoneyEditViewOpen.toggle()
                     
                     if !isMoneyEditViewOpen {
+                        let newBalance = coupon.balance - howMuchSpent
                         isFocused = false
-                        moneyLeft -= howMuchSpent
                         howMuchSpent = .zero
-                        CouponDataProvider.shared.saveCoupons()
+                        
+                        balanceSetterHandler(newBalance)
                     }
                 } label: { 
                     Image(systemName: isMoneyEditViewOpen ? "minus.circle" : "wonsign.circle")
@@ -52,12 +53,10 @@ struct BarcodeView: View {
     }
     
     func barcodeImageViewGenerate() -> Image? {
-        print(barcodeType)
-        
-        if barcodeType == "Barcode" {
-            return BarcodeGenerator.generateBarcodeView(from: couponCode)
+        if coupon.barcodeType == "Barcode" {
+            return BarcodeGenerator.generateBarcodeView(from: coupon.code)
         } else { // barcodeType == "QR Code"
-            return BarcodeGenerator.generateQRCodeView(from: couponCode)
+            return BarcodeGenerator.generateQRCodeView(from: coupon.code)
         }
     }
 }
