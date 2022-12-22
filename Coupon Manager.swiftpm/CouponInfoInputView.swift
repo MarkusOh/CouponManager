@@ -4,14 +4,23 @@ struct CouponInfoInputView: View {
     @Environment(\.dismiss) var dismiss
     
     @Binding var couponCode: String
-    @Binding var couponBalance: Double
-    @Binding var couponExpirationDate: Date
+    @Binding var barcodeType: BarcodeType
+    
+    @State var couponName: String = ""
+    @State var couponBalance: Double = 0.0
+    @State var couponExpirationDate: Date = .now
+    
+    let inputCompletionHandler: (Coupon) -> Void
     
     var body: some View {
         NavigationView(content: {
             Form(content: {
-                Section(content: {
-                    Text("쿠폰 코드: \(couponCode)")
+                Section("쿠폰 이름", content: {
+                    TextField("맥도날드 기프티콘", text: $couponName)
+                })
+                
+                Section("쿠폰 코드", content: {
+                    Text(couponCode)
                 })
                 
                 Section("쿠폰 잔액", content: {
@@ -25,6 +34,7 @@ struct CouponInfoInputView: View {
                 })
                 
                 Button("입력 완료", action: {
+                    inputCompletionHandler(Coupon(name: couponName, code: couponCode, balance: couponBalance, expirationDate: couponExpirationDate, barcodeType: barcodeType))
                     dismiss()
                 })
             })

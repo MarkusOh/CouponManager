@@ -35,7 +35,7 @@ class CouponDataProvider: ObservableObject {
     }
     
     internal func setBalance(on coupon: Coupon, with newBalance: Double) {
-        let newCoupon = Coupon(id: coupon.id, code: coupon.code, balance: newBalance, expirationDate: coupon.expirationDate, barcodeType: coupon.barcodeType)
+        let newCoupon = Coupon(id: coupon.id, name: coupon.name, code: coupon.code, balance: newBalance, expirationDate: coupon.expirationDate, barcodeType: coupon.barcodeType)
         changeCoupon(coupon: newCoupon, index: allCoupons.firstIndex(where: { $0.id == coupon.id })!)
     }
     

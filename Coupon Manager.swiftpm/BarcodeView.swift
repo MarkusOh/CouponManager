@@ -10,6 +10,24 @@ struct BarcodeView: View {
     
     var body: some View {
         VStack {
+            VStack {
+                HStack {
+                    Text(coupon.name)
+                        .font(.title)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.4)
+                        .foregroundColor(.black.opacity(0.8))
+                    Spacer()
+                }
+                HStack {
+                    Text("\(coupon.expirationDate.formatted(date: .numeric, time: .omitted)) 만료")
+                        .font(.caption)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.4)
+                        .foregroundColor(.black.opacity(0.4))
+                    Spacer()
+                }
+            }
             GeometryReader(content: { geometry in
                 VStack {
                     if let barcodeImageView = barcodeImageViewGenerate() {
@@ -22,7 +40,6 @@ struct BarcodeView: View {
                         .font(.caption)
                         .frame(maxWidth: .infinity)
                 }
-                .frame(maxHeight: .infinity)
             })
             HStack {
                 Text("\(coupon.balance.formatted())원 남았습니다")
@@ -39,8 +56,10 @@ struct BarcodeView: View {
                     }
                 } label: { 
                     Image(systemName: isMoneyEditViewOpen ? "minus.circle" : "wonsign.circle")
+                        .resizable()
                         .foregroundColor(.accentColor)
-                        .aspectRatio(1, contentMode: .fill)
+                        .aspectRatio(1, contentMode: .fit)
+                        .frame(width: 30)
                 }
             }
             
@@ -48,15 +67,23 @@ struct BarcodeView: View {
                 TextField("사용한 금액", value: $howMuchSpent, format: .currency(code: "KRW"))
                     .keyboardType(.numberPad)
             }
+            
+            Spacer()
         }
-        .frame(width: 300, height: 250)
+        .frame(maxWidth: .infinity, minHeight: 250, maxHeight: 250)
     }
     
     func barcodeImageViewGenerate() -> Image? {
-        if coupon.barcodeType == "Barcode" {
+        if coupon.barcodeType == .code128 {
             return BarcodeGenerator.generateBarcodeView(from: coupon.code)
         } else { // barcodeType == "QR Code"
             return BarcodeGenerator.generateQRCodeView(from: coupon.code)
         }
+    }
+}
+
+struct BarcodeView_Previews: PreviewProvider {
+    static var previews: some View {
+        BarcodeView(coupon: Coupon(name: "McDonalds", code: "Some code", balance: 4300, expirationDate: .now, barcodeType: .code128), balanceSetterHandler: { _ in })
     }
 }

@@ -10,28 +10,31 @@ enum BarcodeDetectorError: Error {
     case barcodeNotFound
     case cgImageNotFound
     case isBarcodeFetcherPreoccupied
+    case nonBarcodeTypeFound
 }
 
 class BarcodeDetectorFromImage {
-    static func fetchBarcodeString(from image: UIImage) async throws -> (String, AVMetadataObject.ObjectType) {
+    static func fetchBarcodeString(from image: UIImage) async throws -> (String, BarcodeType) {
         guard let cgImage = image.cgImage else {
             throw BarcodeDetectorError.cgImageNotFound
         }
         
-        let observation = try await performBarcodeDetection(from: cgImage, cgImageOrientation: CGImagePropertyOrientation(image.imageOrientation))
+        let observations = try await performBarcodeDetection(from: cgImage, cgImageOrientation: CGImagePropertyOrientation(image.imageOrientation))
         
-        guard let barcodeString = observation.payloadStringValue else {
-            throw BarcodeDetectorError.barcodeNotFound
+        for (barcodeString, barcodeType) in observations.map({ ($0.payloadStringValue, $0.symbology) }) {
+            guard let barcodeString = barcodeString else { continue }
+            
+            switch barcodeType {
+            case .code128: return (barcodeString, .code128)
+            case .qr: return (barcodeString, .qr)
+            default: continue
+            }
         }
         
-        switch observation.symbology {
-        case .code128: return (barcodeString, .code128)
-        case .qr: return (barcodeString, .qr)
-        default: return (barcodeString, .code128)
-        }
+        throw BarcodeDetectorError.nonBarcodeTypeFound
     }
     
-    static func performBarcodeDetection(from cgImage: CGImage, cgImageOrientation: CGImagePropertyOrientation) async throws -> VNBarcodeObservation {
+    static func performBarcodeDetection(from cgImage: CGImage, cgImageOrientation: CGImagePropertyOrientation) async throws -> [VNBarcodeObservation] {
         return try await withCheckedThrowingContinuation({ continuation in
             let request = VNDetectBarcodesRequest(completionHandler: { request, error in
                 guard error == nil else {
@@ -39,13 +42,12 @@ class BarcodeDetectorFromImage {
                     return
                 }
                 
-                guard let observations = request.results as? [VNBarcodeObservation],
-                      let observation = observations.first else {
+                guard let observations = request.results as? [VNBarcodeObservation] else {
                     continuation.resume(throwing: BarcodeDetectorError.barcodeNotFound)
                     return
                 }
                 
-                continuation.resume(returning: observation)
+                continuation.resume(returning: observations)
             })
             
             let handler = VNImageRequestHandler(cgImage: cgImage, orientation: cgImageOrientation, options: [:])

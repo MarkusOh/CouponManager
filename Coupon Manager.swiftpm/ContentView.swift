@@ -17,12 +17,10 @@ struct ContentView: View {
     @State private var errorMessage = ErrorMessage.empty
     @State private var isShowingError = false
     
-    // Alert View for getting balance and expiration date from User
+    // Sheet View for getting balance and expiration date from User
     @State private var isShowingInputSheet = false
     @State private var couponCode = ""
-    @State private var couponBalance = 0.0
-    @State private var couponExpirationDate = Date.now
-    @State private var couponBarcodeType = AVMetadataObject.ObjectType.code128
+    @State private var couponBarcodeType: BarcodeType = .code128
     
     @StateObject var dataProvider = CouponDataProvider.shared
     @State private var selectedPhoto: PhotosPickerItem? = nil
@@ -44,18 +42,6 @@ struct ContentView: View {
         }
     }
     
-    var formattedBarcodeType: String {
-        ContentView.formatBarcodeType(from: couponBarcodeType)
-    }
-    
-    static func formatBarcodeType(from type: AVMetadataObject.ObjectType) -> String {
-        switch type {
-        case .code128: return "Barcode"
-        case .qr: return "QR Code"
-        default: return "Unknown"
-        }
-    }
-    
     var body: some View {
         NavigationView {
             barcodeList
@@ -66,20 +52,11 @@ struct ContentView: View {
                 .presentationDetents([ .medium ])
         }
         .modifier(ErrorAlert(isShowingError: $isShowingError, errorMessage: errorMessage))
-        .sheet(isPresented: $isShowingInputSheet, onDismiss: {
-            dataProvider.create(coupon: Coupon(code: couponCode, balance: couponBalance, expirationDate: couponExpirationDate, barcodeType: formattedBarcodeType))
-            resetAllCouponFields()
-        }, content: {
-            CouponInfoInputView(couponCode: $couponCode, couponBalance: $couponBalance, couponExpirationDate: $couponExpirationDate)
-                .presentationDetents([ .medium ])
+        .sheet(isPresented: $isShowingInputSheet, content: {
+            CouponInfoInputView(couponCode: $couponCode, barcodeType: $couponBarcodeType, inputCompletionHandler: { receivedCoupon in
+                dataProvider.create(coupon: receivedCoupon)
+            }).presentationDetents([ .medium ])
         })
-    }
-    
-    func resetAllCouponFields() {
-        couponCode = ""
-        couponBalance = 0.0
-        couponExpirationDate = .now
-        couponBarcodeType = .code128
     }
 }
 
@@ -101,13 +78,9 @@ extension ContentView {
     var barcodeList: some View {
         List { 
             ForEach(dataProvider.allCoupons) { coupon in
-                HStack {
-                    Spacer()
-                    BarcodeView(coupon: coupon, balanceSetterHandler: { newBalance in
-                        dataProvider.setBalance(on: coupon, with: newBalance)
-                    })
-                    Spacer()
-                }
+                BarcodeView(coupon: coupon, balanceSetterHandler: { newBalance in
+                    dataProvider.setBalance(on: coupon, with: newBalance)
+                })
             }
             .onDelete(perform: dataProvider.delete)
             .onMove(perform: dataProvider.move)

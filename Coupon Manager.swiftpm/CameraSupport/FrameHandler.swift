@@ -4,9 +4,7 @@ import CoreImage
 
 class FrameHandler: NSObject, ObservableObject {
     @Published var frame: CGImage?
-    private var permissionGranted = false
     private var captureSession = AVCaptureSession()
-    private var sessionQueue = DispatchQueue(label: "sessionQueue", qos: .background)
     private let context = CIContext()
     
     var videoOrientation: AVCaptureVideoOrientation = .portrait {
@@ -20,29 +18,26 @@ class FrameHandler: NSObject, ObservableObject {
     override init() {
         super.init()
         
-        checkPermission()
-        sessionQueue.async { [weak self] in
+        Task { [weak self] in
+            guard await checkPermission() else { return }
             self?.setupCaptureSession()
             self?.captureSession.startRunning()
         }
     }
     
-    func checkPermission() {
+    func checkPermission() async -> Bool {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized: 
-            permissionGranted = true
+        case .authorized:
+            return true
         case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .video) { [weak self] isGranted in
-                self?.permissionGranted = isGranted
-            }
+            return await AVCaptureDevice.requestAccess(for: .video)
         default:
-            permissionGranted = false
+            return false
         }
     }
     
     func setupCaptureSession() {
-        guard permissionGranted,
-              let videoDevice = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back),
+        guard let videoDevice = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back),
               let videoDeviceInput = try? AVCaptureDeviceInput(device: videoDevice),
               captureSession.canAddInput(videoDeviceInput) else { return }
         

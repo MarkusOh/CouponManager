@@ -19,9 +19,12 @@ struct CameraView: View {
                 }
             }
         } else {
-            Text("No Camera Available")
-                .colorScheme(.dark)
-                .background(.black)
+            GeometryReader { geometry in
+                Text("No Camera Available")
+                    .foregroundColor(.white.opacity(0.6))
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .background(.black)
+            }
         }
     }
 }
