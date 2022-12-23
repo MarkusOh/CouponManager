@@ -5,7 +5,11 @@ import Combine
 
 class FrameHandler: NSObject, ObservableObject {
     @Published var frame: CGImage?
+    
     @Published var boundingBoxes: [CGRect] = []
+    var detectedBarcodes: [String?] = []
+    var detectedBarcodeTypes: [BarcodeType?] = []
+    
     private var captureSession = AVCaptureSession()
     private let context = CIContext()
     
@@ -22,7 +26,7 @@ class FrameHandler: NSObject, ObservableObject {
         
         let imagePublisher = $frame
             .compactMap { $0 }
-            .throttle(for: .seconds(0.5), scheduler: DispatchQueue.main, latest: true)
+            .throttle(for: .seconds(0.25), scheduler: DispatchQueue.main, latest: true)
             .removeDuplicates()
         
         Task { [weak self] in
@@ -32,9 +36,28 @@ class FrameHandler: NSObject, ObservableObject {
             
             for await newImage in imagePublisher.values {
                 let orientation = await FrameHandler.returnOrientation(from: UIDevice.current.orientation)
-                guard let observations = try? await BarcodeDetectorFromImage.performBarcodeDetection(from: newImage, cgImageOrientation: orientation) else { continue }
+                guard let observations = try? await BarcodeDetectorFromImage.performBarcodeDetection(from: newImage, cgImageOrientation: orientation) else {
+                    await MainActor.run {
+                        boundingBoxes = []
+                        detectedBarcodes = []
+                        detectedBarcodeTypes = []
+                    }
+                    continue
+                }
                 await MainActor.run {
-                    boundingBoxes = observations.map { $0.boundingBox }
+                    let sortedObservations = observations.sorted(by: { $0.boundingBox.origin.x < $1.boundingBox.origin.x })
+                    boundingBoxes = sortedObservations.map { $0.boundingBox }
+                    detectedBarcodes = sortedObservations.map { $0.payloadStringValue }
+                    detectedBarcodeTypes =
+                        sortedObservations.map {
+                            $0.symbology
+                        }.map { symbol -> BarcodeType? in
+                            switch symbol {
+                            case .code128: return .code128
+                            case .qr: return .qr
+                            default: return nil
+                            }
+                        }
                 }
             }
         }

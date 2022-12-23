@@ -123,9 +123,9 @@ extension ContentView {
     
     var cameraScannerView: some View {
         GeometryReader { geometry in
-            CameraView { newImage in
-                guard let newData = UIImage(cgImage: newImage).pngData() else { return }
-                selectedPhotoImageData = newData
+            CameraView { (barcodeString, barcodeType) in
+                couponBarcodeType = barcodeType
+                handleScan(result: .success(barcodeString))
             }.frame(width: geometry.size.width, height: geometry.size.height)
                 .clipped()
         }
