@@ -1,9 +1,11 @@
 import SwiftUI
 import AVFoundation
 import CoreImage
+import Combine
 
 class FrameHandler: NSObject, ObservableObject {
     @Published var frame: CGImage?
+    @Published var boundingBoxes: [CGRect] = []
     private var captureSession = AVCaptureSession()
     private let context = CIContext()
     
@@ -18,10 +20,20 @@ class FrameHandler: NSObject, ObservableObject {
     override init() {
         super.init()
         
+        let imagePublisher = $frame
+            .compactMap { $0 }
+            .throttle(for: .seconds(0.5), scheduler: DispatchQueue.main, latest: true)
+        
         Task { [weak self] in
             guard await checkPermission() else { return }
             self?.setupCaptureSession()
             self?.captureSession.startRunning()
+            
+            for await newImage in imagePublisher.values {
+                let orientation = await FrameHandler.returnOrientation(from: UIDevice.current.orientation)
+                let observations = try await BarcodeDetectorFromImage.performBarcodeDetection(from: newImage, cgImageOrientation: orientation)
+                boundingBoxes = observations.map { $0.boundingBox }
+            }
         }
     }
     
@@ -64,5 +76,28 @@ extension FrameHandler: AVCaptureVideoDataOutputSampleBufferDelegate {
         let ciImage = CIImage(cvImageBuffer: imageBuffer)
         guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
         return cgImage
+    }
+}
+
+extension FrameHandler {
+    static func returnOrientation(from uiDeviceOrientation: UIDeviceOrientation) -> CGImagePropertyOrientation {
+        switch uiDeviceOrientation {
+        case .unknown:
+            return .up
+        case .portrait:
+            return .up
+        case .portraitUpsideDown:
+            return .down
+        case .landscapeLeft:
+            return .left
+        case .landscapeRight:
+            return .right
+        case .faceUp:
+            return .up
+        case .faceDown:
+            return .up
+        @unknown default:
+            return .up
+        }
     }
 }
