@@ -32,7 +32,9 @@ class FrameHandler: NSObject, ObservableObject {
             for await newImage in imagePublisher.values {
                 let orientation = await FrameHandler.returnOrientation(from: UIDevice.current.orientation)
                 let observations = try await BarcodeDetectorFromImage.performBarcodeDetection(from: newImage, cgImageOrientation: orientation)
-                boundingBoxes = observations.map { $0.boundingBox }
+                await MainActor.run {
+                    boundingBoxes = observations.map { $0.boundingBox }
+                }
             }
         }
     }
