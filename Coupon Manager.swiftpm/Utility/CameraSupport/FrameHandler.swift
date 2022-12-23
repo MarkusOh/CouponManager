@@ -23,6 +23,7 @@ class FrameHandler: NSObject, ObservableObject {
         let imagePublisher = $frame
             .compactMap { $0 }
             .throttle(for: .seconds(0.5), scheduler: DispatchQueue.main, latest: true)
+            .removeDuplicates()
         
         Task { [weak self] in
             guard await checkPermission() else { return }
@@ -31,7 +32,7 @@ class FrameHandler: NSObject, ObservableObject {
             
             for await newImage in imagePublisher.values {
                 let orientation = await FrameHandler.returnOrientation(from: UIDevice.current.orientation)
-                let observations = try await BarcodeDetectorFromImage.performBarcodeDetection(from: newImage, cgImageOrientation: orientation)
+                guard let observations = try? await BarcodeDetectorFromImage.performBarcodeDetection(from: newImage, cgImageOrientation: orientation) else { continue }
                 await MainActor.run {
                     boundingBoxes = observations.map { $0.boundingBox }
                 }

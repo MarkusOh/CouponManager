@@ -5,6 +5,7 @@ import AVFoundation
 // https://www.avanderlee.com/swift/async-await/
 // https://betterprogramming.pub/detecting-objects-in-still-images-using-vision-framework-in-ios-82877bc87703
 // https://www.kodeco.com/12663654-vision-framework-tutorial-for-ios-scanning-barcodes
+// TODO: https://www.asp.com.au/how-to-identify-barcode-types-visually/ (I need to add more barcode type support)
 
 enum BarcodeDetectorError: Error {
     case barcodeNotFound
@@ -47,7 +48,19 @@ class BarcodeDetectorFromImage {
                     return
                 }
                 
-                continuation.resume(returning: observations)
+                let refinedObservations = observations.filter { observation in
+                    switch observation.symbology {
+                    case .code128: return true
+                    case .qr: return true
+                    default: return false
+                    }
+                }
+                
+                if !refinedObservations.isEmpty {
+                    continuation.resume(returning: refinedObservations)
+                } else {
+                    continuation.resume(throwing: BarcodeDetectorError.barcodeNotFound)
+                }
             })
             
             let handler = VNImageRequestHandler(cgImage: cgImage, orientation: cgImageOrientation, options: [:])

@@ -2,6 +2,7 @@ import SwiftUI
 import Combine
 
 struct CameraView: View {
+    @State private var image: CGImage?
     @StateObject private var model = FrameHandler()
     let imageHandler: (CGImage) -> Void
     
@@ -9,13 +10,12 @@ struct CameraView: View {
         if let image = model.frame {
             ZStack {
                 FrameView(image: image)
-                VStack {
-                    Spacer()
-                    Spacer()
-                    Button("이미지 사용", action: {
-                        imageHandler(image)
-                    })
-                    Spacer()
+                if !model.boundingBoxes.isEmpty {
+                    ForEach(0..<model.boundingBoxes.count, id: \.hashValue) { (boxIndex) in
+                        BoxView(detectedBox: model.boundingBoxes[boxIndex])
+                            .stroke(.red, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
             }
         } else {
@@ -26,5 +26,25 @@ struct CameraView: View {
                     .background(.black)
             }
         }
+    }
+}
+
+struct BoxView: Shape {
+    let detectedBox: CGRect
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        path.move(to: CGPoint(x: rect.width * detectedBox.origin.x, y: rect.height * (1 - detectedBox.origin.y)))
+        path.addLine(to: CGPoint(x: rect.width * detectedBox.origin.x + rect.width * detectedBox.width,
+                                 y: rect.height * (1 - detectedBox.origin.y)))
+        path.addLine(to: CGPoint(x: rect.width * detectedBox.origin.x + rect.width * detectedBox.width,
+                                 y: rect.height * (1 - detectedBox.origin.y) - rect.height * detectedBox.height))
+        path.addLine(to: CGPoint(x: rect.width * detectedBox.origin.x,
+                                 y: rect.height * (1 - detectedBox.origin.y) - rect.height * detectedBox.height))
+        path.addLine(to: CGPoint(x: rect.width * detectedBox.origin.x, y: rect.height * (1 - detectedBox.origin.y)))
+        path.closeSubpath()
+        
+        return path
     }
 }
