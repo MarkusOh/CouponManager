@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct BarcodeView: View {
+struct CouponView: View {
     let coupon: Coupon
     let balanceSetterHandler: (Double) -> Void
     
@@ -84,6 +84,6 @@ struct BarcodeView: View {
 
 struct BarcodeView_Previews: PreviewProvider {
     static var previews: some View {
-        BarcodeView(coupon: Coupon(name: "McDonalds", code: "Some code", balance: 4300, expirationDate: .now, barcodeType: .code128), balanceSetterHandler: { _ in })
+        CouponView(coupon: Coupon(name: "McDonalds", code: "Some code", balance: 4300, expirationDate: .now, barcodeType: .code128), balanceSetterHandler: { _ in })
     }
 }

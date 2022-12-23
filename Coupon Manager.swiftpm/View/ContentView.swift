@@ -78,7 +78,7 @@ extension ContentView {
     var barcodeList: some View {
         List { 
             ForEach(dataProvider.allCoupons) { coupon in
-                BarcodeView(coupon: coupon, balanceSetterHandler: { newBalance in
+                CouponView(coupon: coupon, balanceSetterHandler: { newBalance in
                     dataProvider.setBalance(on: coupon, with: newBalance)
                 })
             }
