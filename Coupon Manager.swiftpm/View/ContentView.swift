@@ -9,6 +9,12 @@ struct ErrorMessage {
     var detail: String
 }
 
+enum ContentViewError: Error {
+    case dataToUIImageFail
+    case nilFound
+    case unableToLoadTransferable
+}
+
 struct ContentView: View {
     @State private var moneyLeft = 100.0
     @State private var isShowingScanner = false
@@ -24,23 +30,6 @@ struct ContentView: View {
     
     @StateObject var dataProvider = CouponDataProvider.shared
     @State private var selectedPhoto: PhotosPickerItem? = nil
-    @State private var selectedPhotoImageData: Data? = nil {
-        didSet {
-            guard let selectedPhotoImageData = selectedPhotoImageData,
-                  let image = UIImage(data: selectedPhotoImageData) else { return }
-            
-            Task(priority: .background) { 
-                do {
-                    let (barcodeString, barcodeType) = try await BarcodeDetectorFromImage.fetchBarcodeString(from: image)
-                    self.couponBarcodeType = barcodeType
-                    
-                    handleScan(result: .success(barcodeString))
-                } catch {
-                    handleScan(result: .failure(error))
-                }
-            }
-        }
-    }
     
     var body: some View {
         NavigationView {
@@ -112,32 +101,43 @@ extension ContentView {
             Text("포토 앨범을 열어 사진 선택하기")
         }
         .onChange(of: selectedPhoto, perform: { newItem in
-            Task {
-                guard let data = try? await newItem?.loadTransferable(type: Data.self) else {
-                    return
+            Task(priority: .background) {
+                do {
+                    guard let newItem = newItem else { throw ContentViewError.nilFound }
+                    let data = try await newItem.loadTransferable(type: Data.self)
+                    guard let data = data else { throw ContentViewError.unableToLoadTransferable }
+                    let result = try await fetchCodeAndType(from: data)
+                    handleScan(result: .success(result))
+                } catch {
+                    handleScan(result: .failure(error))
                 }
-                selectedPhotoImageData = data
             }
         })
     }
     
     var cameraScannerView: some View {
         GeometryReader { geometry in
-            CameraView { newImage in
-                guard let newData = UIImage(cgImage: newImage).pngData() else { return }
-                selectedPhotoImageData = newData
+            CameraView { barcodeString, barcodeType  in
+                handleScan(result: .success((barcodeString, barcodeType)))
             }.frame(width: geometry.size.width, height: geometry.size.height)
                 .clipped()
         }
     }
     
-    func handleScan(result: Result<String, Error>) {
+    func fetchCodeAndType(from data: Data) async throws -> (String, BarcodeType) {
+        guard let image = UIImage(data: data) else { throw ContentViewError.dataToUIImageFail }
+        let observationResult = try await BarcodeDetectorFromImage.fetchBarcodeString(from: image)
+        return observationResult
+    }
+    
+    func handleScan(result: Result<(String, BarcodeType), Error>) {
         isShowingScanner = false
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             switch result {
-            case .success(let result):
-                couponCode = result
+            case .success(let (barcodeString, barcodeType)):
+                couponCode = barcodeString
+                couponBarcodeType = barcodeType
                 isShowingInputSheet.toggle()
                 
             case .failure(let resultError):

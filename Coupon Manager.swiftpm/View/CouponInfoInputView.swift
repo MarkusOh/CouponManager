@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct CouponInfoInputView: View {
     @Environment(\.dismiss) var dismiss
@@ -24,7 +25,7 @@ struct CouponInfoInputView: View {
                 })
                 
                 Section("쿠폰 잔액", content: {
-                    TextField("1,0000원", value: $couponBalance, format: .currency(code: "KRW"))
+                    TextField("￦10000", value: $couponBalance, formatter: NumberFormatter.currencyFormatter)
                         .keyboardType(.numberPad)
                 })
                 

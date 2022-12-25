@@ -1,9 +1,15 @@
 import SwiftUI
 import AVFoundation
 import CoreImage
+import Combine
 
 class FrameHandler: NSObject, ObservableObject {
     @Published var frame: CGImage?
+    
+    @Published var boundingBoxes: [CGRect] = []
+    var detectedBarcodes: [String?] = []
+    var detectedBarcodeTypes: [BarcodeType?] = []
+    
     private var captureSession = AVCaptureSession()
     private let context = CIContext()
     
@@ -18,10 +24,46 @@ class FrameHandler: NSObject, ObservableObject {
     override init() {
         super.init()
         
+        let imagePublisher = $frame
+            .compactMap { $0 }
+            .throttle(for: .seconds(0.25), scheduler: DispatchQueue.main, latest: true)
+            .removeDuplicates()
+        
         Task { [weak self] in
             guard await checkPermission() else { return }
             self?.setupCaptureSession()
             self?.captureSession.startRunning()
+            
+            for await newImage in imagePublisher.values {
+                let orientation = await FrameHandler.returnOrientation(from: UIDevice.current.orientation)
+                guard let observations = try? await BarcodeDetectorFromImage.performBarcodeDetection(from: newImage, cgImageOrientation: orientation) else {
+                    await MainActor.run {
+                        boundingBoxes = []
+                        detectedBarcodes = []
+                        detectedBarcodeTypes = []
+                    }
+                    continue
+                }
+                
+                let sortedObservations = observations.sorted(by: { $0.boundingBox.origin.x < $1.boundingBox.origin.x })
+                let boxes = sortedObservations.map { $0.boundingBox }
+                let barcodes = sortedObservations.map { $0.payloadStringValue }
+                let types = sortedObservations.map {
+                    $0.symbology
+                }.map { symbol -> BarcodeType? in
+                    switch symbol {
+                    case .code128: return .code128
+                    case .qr: return .qr
+                    default: return nil
+                    }
+                }
+                
+                await MainActor.run { [weak self] in
+                    self?.boundingBoxes = boxes
+                    self?.detectedBarcodes = barcodes
+                    self?.detectedBarcodeTypes = types
+                }
+            }
         }
     }
     
@@ -64,5 +106,28 @@ extension FrameHandler: AVCaptureVideoDataOutputSampleBufferDelegate {
         let ciImage = CIImage(cvImageBuffer: imageBuffer)
         guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
         return cgImage
+    }
+}
+
+extension FrameHandler {
+    static func returnOrientation(from uiDeviceOrientation: UIDeviceOrientation) -> CGImagePropertyOrientation {
+        switch uiDeviceOrientation {
+        case .unknown:
+            return .up
+        case .portrait:
+            return .up
+        case .portraitUpsideDown:
+            return .down
+        case .landscapeLeft:
+            return .left
+        case .landscapeRight:
+            return .right
+        case .faceUp:
+            return .up
+        case .faceDown:
+            return .up
+        @unknown default:
+            return .up
+        }
     }
 }

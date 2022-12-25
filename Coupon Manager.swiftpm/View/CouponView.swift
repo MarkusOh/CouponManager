@@ -64,8 +64,12 @@ struct CouponView: View {
             }
             
             if isMoneyEditViewOpen {
-                TextField("사용한 금액", value: $howMuchSpent, format: .currency(code: "KRW"))
+                TextField("사용한 금액", value: $howMuchSpent, formatter: NumberFormatter.currencyFormatter)
+                    .focused($isFocused)
                     .keyboardType(.numberPad)
+                    .onAppear {
+                        isFocused.toggle()
+                    }
             }
             
             Spacer()
