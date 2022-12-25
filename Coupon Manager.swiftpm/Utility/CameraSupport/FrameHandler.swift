@@ -44,20 +44,23 @@ class FrameHandler: NSObject, ObservableObject {
                     }
                     continue
                 }
+                
+                let sortedObservations = observations.sorted(by: { $0.boundingBox.origin.x < $1.boundingBox.origin.x })
+                boundingBoxes = sortedObservations.map { $0.boundingBox }
+                detectedBarcodes = sortedObservations.map { $0.payloadStringValue }
+                
+                let observedTypes = sortedObservations.map {
+                    $0.symbology
+                }.map { symbol -> BarcodeType? in
+                    switch symbol {
+                    case .code128: return .code128
+                    case .qr: return .qr
+                    default: return nil
+                    }
+                }
+                
                 await MainActor.run {
-                    let sortedObservations = observations.sorted(by: { $0.boundingBox.origin.x < $1.boundingBox.origin.x })
-                    boundingBoxes = sortedObservations.map { $0.boundingBox }
-                    detectedBarcodes = sortedObservations.map { $0.payloadStringValue }
-                    detectedBarcodeTypes =
-                        sortedObservations.map {
-                            $0.symbology
-                        }.map { symbol -> BarcodeType? in
-                            switch symbol {
-                            case .code128: return .code128
-                            case .qr: return .qr
-                            default: return nil
-                            }
-                        }
+                    detectedBarcodeTypes = observedTypes
                 }
             }
         }
