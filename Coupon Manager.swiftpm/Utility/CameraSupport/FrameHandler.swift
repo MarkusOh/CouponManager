@@ -46,10 +46,9 @@ class FrameHandler: NSObject, ObservableObject {
                 }
                 
                 let sortedObservations = observations.sorted(by: { $0.boundingBox.origin.x < $1.boundingBox.origin.x })
-                boundingBoxes = sortedObservations.map { $0.boundingBox }
-                detectedBarcodes = sortedObservations.map { $0.payloadStringValue }
-                
-                let observedTypes = sortedObservations.map {
+                let boxes = sortedObservations.map { $0.boundingBox }
+                let barcodes = sortedObservations.map { $0.payloadStringValue }
+                let types = sortedObservations.map {
                     $0.symbology
                 }.map { symbol -> BarcodeType? in
                     switch symbol {
@@ -59,8 +58,10 @@ class FrameHandler: NSObject, ObservableObject {
                     }
                 }
                 
-                await MainActor.run {
-                    detectedBarcodeTypes = observedTypes
+                await MainActor.run { [weak self] in
+                    self?.boundingBoxes = boxes
+                    self?.detectedBarcodes = barcodes
+                    self?.detectedBarcodeTypes = types
                 }
             }
         }
