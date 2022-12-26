@@ -12,7 +12,7 @@ struct MyApp: App {
                 .onAppear {
                     GIDSignIn.sharedInstance.restorePreviousSignIn(completion: { _, _ in
                         // Trigger Album fetching immediately
-                        let _ = GooglePhotoAlbumsProvider.shared
+                        let _ = GooglePhotosDataProvider.shared
                     })
                 }
         }

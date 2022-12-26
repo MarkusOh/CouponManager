@@ -17,15 +17,17 @@ enum GooglePhotoAlbumsProviderError: Error {
     case unsuccessfulResponseCode
 }
 
-class GooglePhotoAlbumsProvider: ObservableObject {
-    static let shared = GooglePhotoAlbumsProvider()
+class GooglePhotosDataProvider: ObservableObject {
+    static let shared = GooglePhotosDataProvider()
     
-    @Published var availableAlbums: [GooglePhotosAlbum] = []
-    @Published var isGooglePhotosAvailable: Bool = (GIDSignIn.sharedInstance.currentUser?.grantedScopes ?? []).contains(GooglePhotoAlbumsProvider.photosScope)
+    @Published var availablePhotos: [GooglePhotoItem] = []
+    @Published var isGooglePhotosAvailable: Bool = (GIDSignIn.sharedInstance.currentUser?.grantedScopes ?? []).contains(GooglePhotosDataProvider.photosScope)
     @Published var errorReminder: Error? = nil
     
     static let googlePhotosAPIKey = "AIzaSyCXrm2FEm0AZtCvbkNaRtuK1sPgMO1SDIk"
     static let photosScope = "https://www.googleapis.com/auth/photoslibrary.readonly"
+    
+    var nextPageToken: String? = nil
     
     init() {
         Task {
@@ -36,7 +38,7 @@ class GooglePhotoAlbumsProvider: ObservableObject {
                         return Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
                     }
                     .first(where: { _ in
-                        (GIDSignIn.sharedInstance.currentUser!.grantedScopes ?? []).contains(GooglePhotoAlbumsProvider.photosScope)
+                        (GIDSignIn.sharedInstance.currentUser!.grantedScopes ?? []).contains(GooglePhotosDataProvider.photosScope)
                     })
             
             for await _ in googleSignInChange.values {
@@ -48,7 +50,9 @@ class GooglePhotoAlbumsProvider: ObservableObject {
                     }
                     try await attempFetchingAlbums()
                 } catch {
-                    errorReminder = error
+                    await MainActor.run {
+                        errorReminder = error
+                    }
                 }
             }
         }
@@ -62,12 +66,12 @@ class GooglePhotoAlbumsProvider: ObservableObject {
         return window.rootViewController
     }
     
-    func attempFetchingAlbums() async throws {
+    func attempFetchingAlbums(nextPageToken: String? = nil) async throws {
         guard let user = GIDSignIn.sharedInstance.currentUser else {
             throw GooglePhotoAlbumsProviderError.userDidNotSignIn
         }
         
-        guard (user.grantedScopes ?? []).contains(GooglePhotoAlbumsProvider.photosScope) else {
+        guard (user.grantedScopes ?? []).contains(GooglePhotosDataProvider.photosScope) else {
             throw GooglePhotoAlbumsProviderError.userDidNotConsent
         }
         
@@ -76,14 +80,29 @@ class GooglePhotoAlbumsProvider: ObservableObject {
         var components = URLComponents()
         components.scheme = "https"
         components.host = "photoslibrary.googleapis.com"
-        components.path = "/v1/albums"
+        components.path = "/v1/mediaItems:search"
         components.queryItems = [
-            URLQueryItem(name: "key", value: GooglePhotoAlbumsProvider.googlePhotosAPIKey)
+            URLQueryItem(name: "key", value: GooglePhotosDataProvider.googlePhotosAPIKey)
         ]
         
+        var filter: [String: Any] = [
+            "filters": [
+                "mediaTypeFilter": [
+                    "mediaTypes": ["PHOTO"]
+                ]
+            ]
+        ]
+        
+        if let nextPageToken = nextPageToken {
+            filter["pageToken"] = nextPageToken
+        }
+        
         var request = URLRequest(url: components.url!)
-        request.httpMethod = "GET"
+        request.httpMethod = "POST"
         request.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: filter)
         
         let (data, response) = try await URLSession(configuration: .default).data(for: request)
         let responseCode = (response as! HTTPURLResponse).statusCode
@@ -92,11 +111,24 @@ class GooglePhotoAlbumsProvider: ObservableObject {
             throw GooglePhotoAlbumsProviderError.unsuccessfulResponseCode
         }
         
-        let receivedData = try JSONDecoder().decode(GooglePhotosAlbumsStructure.self, from: data)
+        let receivedData = try JSONDecoder().decode(GooglePhotosStructure.self, from: data)
+        self.nextPageToken = receivedData.nextPageToken
         
-        await MainActor.run(body: {
-            availableAlbums = receivedData.albums.sorted(by: { $0.title < $1.title })
-        })
+        await MainActor.run { [unowned self] in
+            availablePhotos.append(contentsOf: receivedData.mediaItems)
+        }
+    }
+    
+    func attemptToFetchMorePhotos() {
+        Task {
+            do {
+                try await attempFetchingAlbums(nextPageToken: nextPageToken)
+            } catch {
+                await MainActor.run {
+                    errorReminder = error
+                }
+            }
+        }
     }
     
     func getAccessTokenFromUser() async throws -> String {
@@ -142,12 +174,12 @@ class GooglePhotoAlbumsProvider: ObservableObject {
         
         let userGrantedScopes = GIDSignIn.sharedInstance.currentUser?.grantedScopes ?? []
         
-        guard !userGrantedScopes.contains(GooglePhotoAlbumsProvider.photosScope) else {
+        guard !userGrantedScopes.contains(GooglePhotosDataProvider.photosScope) else {
             return true
         }
         
         return await withCheckedContinuation { continuation in
-            GIDSignIn.sharedInstance.currentUser?.addScopes([GooglePhotoAlbumsProvider.photosScope], presenting: rootViewController) { result, error in
+            GIDSignIn.sharedInstance.currentUser?.addScopes([GooglePhotosDataProvider.photosScope], presenting: rootViewController) { result, error in
                 guard let result = result,
                       error == nil else {
                     continuation.resume(returning: false)
@@ -155,7 +187,7 @@ class GooglePhotoAlbumsProvider: ObservableObject {
                 }
                 
                 guard let scope = result.user.grantedScopes,
-                      scope.contains(GooglePhotoAlbumsProvider.photosScope) else {
+                      scope.contains(GooglePhotosDataProvider.photosScope) else {
                     continuation.resume(returning: false)
                     return
                 }

@@ -30,6 +30,22 @@ struct GooglePhotosAlbum: Identifiable, Codable {
     }
 }
 
-//struct GooglePhotoItem: Identifiable, Codable {
-//    var id
-//}
+struct GooglePhotosStructure: Codable {
+    let mediaItems: [GooglePhotoItem]
+    let nextPageToken: String
+}
+
+struct GooglePhotoItem: Identifiable, Codable {
+    var id: String
+    let baseUrl: URL // <#Base_URL#>=w1000-h1000 => Give me an image lower than 1000x1000
+    let mimeType: String
+    let filename: String
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(String.self, forKey: .id)
+        self.baseUrl = URL(string: try container.decode(String.self, forKey: .baseUrl))!
+        self.mimeType = try container.decode(String.self, forKey: .mimeType)
+        self.filename = try container.decode(String.self, forKey: .filename)
+    }
+}

@@ -18,6 +18,7 @@ enum ContentViewError: Error {
 
 struct ContentView: View {
     @State private var isShowingScanner = false
+    @State private var isShowingPhotoPicker = false
     
     // Error Title and Message
     @State private var errorMessage = ErrorMessage.empty
@@ -40,7 +41,7 @@ struct ContentView: View {
         }
         .navigationViewStyle(.stack)
         .sheet(isPresented: $isShowingScanner) { 
-            scannerView
+            cameraScannerView
                 .presentationDetents([ .medium ])
         }
         .modifier(ErrorAlert(isShowingError: $isShowingError, errorMessage: errorMessage))
@@ -50,7 +51,21 @@ struct ContentView: View {
             }).presentationDetents([ .medium ])
         })
         .sheet(isPresented: $isShowingGooglePhotosView, content: {
-            GooglePhotosAlbumView(googlePhotosError: $errorMessage, googlePhotosErrorShow: $isShowingError)
+            GooglePhotosView(googlePhotosError: $errorMessage, googlePhotosErrorShow: $isShowingError)
+        })
+        .photosPicker(isPresented: $isShowingPhotoPicker, selection: $selectedPhoto)
+        .onChange(of: selectedPhoto, perform: { newItem in
+            Task(priority: .background) {
+                do {
+                    guard let newItem = newItem else { throw ContentViewError.nilFound }
+                    let data = try await newItem.loadTransferable(type: Data.self)
+                    guard let data = data else { throw ContentViewError.unableToLoadTransferable }
+                    let result = try await fetchCodeAndType(from: data)
+                    handleScan(result: .success(result))
+                } catch {
+                    handleScan(result: .failure(error))
+                }
+            }
         })
     }
 }
@@ -85,10 +100,10 @@ extension ContentView {
             ToolbarItem(placement: .navigationBarTrailing, content: {
                 Menu {
                     Button("포토앨범") {
-                        // TODO: Show Photo Album View
+                        isShowingPhotoPicker.toggle()
                     }
                     Button("카메라") {
-                        // TODO: Show Camera View
+                        isShowingScanner.toggle()
                     }
                     Button("Google Photos", action: {
                         isShowingGooglePhotosView.toggle()
@@ -101,32 +116,6 @@ extension ContentView {
         .alert(isPresented: $isShowingError) {
             Alert(title: Text(errorMessage.title), message: Text(errorMessage.detail), dismissButton: .default(Text("OK")))
         }
-    }
-    
-    var scannerView: some View {
-        VStack {
-            cameraScannerView
-            imageSelectionView
-        }
-    }
-    
-    var imageSelectionView: some View {
-        PhotosPicker(selection: $selectedPhoto, matching: .images, photoLibrary: .shared()) { 
-            Text("포토 앨범을 열어 사진 선택하기")
-        }
-        .onChange(of: selectedPhoto, perform: { newItem in
-            Task(priority: .background) {
-                do {
-                    guard let newItem = newItem else { throw ContentViewError.nilFound }
-                    let data = try await newItem.loadTransferable(type: Data.self)
-                    guard let data = data else { throw ContentViewError.unableToLoadTransferable }
-                    let result = try await fetchCodeAndType(from: data)
-                    handleScan(result: .success(result))
-                } catch {
-                    handleScan(result: .failure(error))
-                }
-            }
-        })
     }
     
     var cameraScannerView: some View {
