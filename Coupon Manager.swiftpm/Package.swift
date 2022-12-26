@@ -35,13 +35,22 @@ let package = Package(
             capabilities: [
                 .camera(purposeString: "We need to scan QR codes")
             ],
-            appCategory: .lifestyle
+            appCategory: .lifestyle,
+            additionalInfoPlistContentFilePath: "MoreInfo.plist"
         )
+    ],
+    dependencies: [
+        .package(url: "https://github.com/google/GoogleSignIn-iOS", "7.0.0"..<"8.0.0")
     ],
     targets: [
         .executableTarget(
             name: "AppModule",
-            path: "."
+            dependencies: [
+                .product(name: "GoogleSignIn", package: "googlesignin-ios"),
+                .product(name: "GoogleSignInSwift", package: "googlesignin-ios")
+            ],
+            path: ".",
+            exclude: ["./MoreInfo.plist"]
         )
     ]
 )

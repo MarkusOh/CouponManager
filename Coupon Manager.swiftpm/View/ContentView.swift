@@ -1,6 +1,7 @@
 import AVFoundation
 import PhotosUI
 import SwiftUI
+import GoogleSignIn
 
 struct ErrorMessage {
     static let empty: ErrorMessage = ErrorMessage(title: "", detail: "")
@@ -16,7 +17,6 @@ enum ContentViewError: Error {
 }
 
 struct ContentView: View {
-    @State private var moneyLeft = 100.0
     @State private var isShowingScanner = false
     
     // Error Title and Message
@@ -29,6 +29,9 @@ struct ContentView: View {
     @State private var couponBarcodeType: BarcodeType = .code128
     
     @StateObject var dataProvider = CouponDataProvider.shared
+    
+    @State private var isShowingGooglePhotosView = false
+    
     @State private var selectedPhoto: PhotosPickerItem? = nil
     
     var body: some View {
@@ -45,6 +48,9 @@ struct ContentView: View {
             CouponInfoInputView(couponCode: $couponCode, barcodeType: $couponBarcodeType, inputCompletionHandler: { receivedCoupon in
                 dataProvider.create(coupon: receivedCoupon)
             }).presentationDetents([ .medium ])
+        })
+        .sheet(isPresented: $isShowingGooglePhotosView, content: {
+            GooglePhotosAlbumView(googlePhotosError: $errorMessage, googlePhotosErrorShow: $isShowingError)
         })
     }
 }
@@ -77,11 +83,19 @@ extension ContentView {
         .navigationTitle("My쿠폰")
         .toolbar(content: {
             ToolbarItem(placement: .navigationBarTrailing, content: {
-                Button(action: {
-                    isShowingScanner.toggle()
-                }, label: {
+                Menu {
+                    Button("포토앨범") {
+                        // TODO: Show Photo Album View
+                    }
+                    Button("카메라") {
+                        // TODO: Show Camera View
+                    }
+                    Button("Google Photos", action: {
+                        isShowingGooglePhotosView.toggle()
+                    })
+                } label: {
                     Image(systemName: "plus")
-                })                
+                }
             })
         })
         .alert(isPresented: $isShowingError) {
