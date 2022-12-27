@@ -31,13 +31,13 @@ struct GooglePhotosAlbum: Identifiable, Codable {
 }
 
 struct GooglePhotosStructure: Codable {
-    let mediaItems: [GooglePhotoItem]
+    let mediaItems: [GooglePhotoItem]?
     let nextPageToken: String
 }
 
 struct GooglePhotoItem: Identifiable, Codable {
     var id: String
-    let baseUrl: URL // <#Base_URL#>=w1000-h1000 => Give me an image lower than 1000x1000
+    let baseUrl: URL
     let mimeType: String
     let filename: String
     

@@ -25,8 +25,15 @@ struct GooglePhotosView: View {
             } else {
                 authenticationView
             }
+            
             if let errorReminder = photosProvider.errorReminder {
                 Text("Error: \(errorReminder.localizedDescription)")
+                    .padding(.all
+                    )
+                    .foregroundColor(.white)
+                    .background(.gray)
+                    .padding(.all)
+                    .opacity(0.8)
             }
         }
     }
@@ -40,7 +47,7 @@ struct GooglePhotosView: View {
                             // TODO: Fetch photo to detect barcode
                             
                         } label: {
-                            AsyncImage(url: URL(string: photo.baseUrl.absoluteString.appending("=w600-h600"))!, content: { image in
+                            AsyncImage(url: URL(string: photo.baseUrl.absoluteString.appending("=w400-h400-c"))!, content: { image in
                                 image
                                     .resizable()
                                     .scaledToFill()

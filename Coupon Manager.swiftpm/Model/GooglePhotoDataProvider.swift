@@ -114,8 +114,13 @@ class GooglePhotosDataProvider: ObservableObject {
         let receivedData = try JSONDecoder().decode(GooglePhotosStructure.self, from: data)
         self.nextPageToken = receivedData.nextPageToken
         
+        guard let mediaItems = receivedData.mediaItems else {
+            try await attempFetchingAlbums(nextPageToken: receivedData.nextPageToken)
+            return
+        }
+        
         await MainActor.run { [unowned self] in
-            availablePhotos.append(contentsOf: receivedData.mediaItems)
+            availablePhotos.append(contentsOf: mediaItems)
         }
     }
     
