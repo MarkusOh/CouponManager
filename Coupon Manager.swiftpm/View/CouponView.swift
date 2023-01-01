@@ -5,17 +5,7 @@ struct CouponView: View {
     let balanceSetterHandler: (Double) -> Void
     
     @State private var howMuchSpent = 0.0
-    @State private var isMoneyEditViewOpen = false {
-        didSet {
-            guard oldValue == true && isMoneyEditViewOpen == false else { return }
-            
-            // SwiftUI does not allow changing the value when the textfield is focused
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                howMuchSpent = .zero
-            }
-        }
-    }
-    @FocusState var isFocused: Bool
+    @State private var isMoneyEditViewOpen = false
     
     var body: some View {
         VStack {
@@ -39,7 +29,7 @@ struct CouponView: View {
             }
             GeometryReader(content: { geometry in
                 VStack {
-                    if let barcodeImageView = barcodeImageViewGenerate() {
+                    if let barcodeImageView = BarcodeGenerator.barcodeImageViewGenerate(with: coupon) {
                         barcodeImageView
                             .resizable()
                             .scaledToFit()
@@ -53,44 +43,20 @@ struct CouponView: View {
             HStack {
                 Text("\(coupon.balance.formatted())원 남았습니다")
                 Spacer()
-                Button { 
-                    if isMoneyEditViewOpen {
-                        let newBalance = coupon.balance - howMuchSpent
-                        isFocused = false
-                        
-                        balanceSetterHandler(newBalance)
-                    }
-                    
+                Button {
                     isMoneyEditViewOpen.toggle()
                 } label: { 
-                    Image(systemName: isMoneyEditViewOpen ? "minus.circle" : "wonsign.circle")
+                    Image(systemName: "wonsign.circle")
                         .resizable()
                         .foregroundColor(.accentColor)
                         .aspectRatio(1, contentMode: .fit)
                         .frame(width: 30)
                 }
             }
-            
-            if isMoneyEditViewOpen {
-                TextField("사용한 금액", value: $howMuchSpent, formatter: NumberFormatter.currencyFormatter)
-                    .focused($isFocused)
-                    .keyboardType(.numberPad)
-                    .onAppear {
-                        isFocused.toggle()
-                    }
-            }
-            
             Spacer()
         }
+        .moneyEditor(coupon: coupon, isPresented: $isMoneyEditViewOpen, balanceSetterHandler: balanceSetterHandler)
         .frame(maxWidth: .infinity, minHeight: 250, maxHeight: 250)
-    }
-    
-    func barcodeImageViewGenerate() -> Image? {
-        if coupon.barcodeType == .code128 {
-            return BarcodeGenerator.generateBarcodeView(from: coupon.code)
-        } else { // barcodeType == "QR Code"
-            return BarcodeGenerator.generateQRCodeView(from: coupon.code)
-        }
     }
 }
 

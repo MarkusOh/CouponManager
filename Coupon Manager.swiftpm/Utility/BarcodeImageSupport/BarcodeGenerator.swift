@@ -47,4 +47,12 @@ struct BarcodeGenerator {
         
         return Image(uiImage: image)
     }
+    
+    static func barcodeImageViewGenerate(with coupon: Coupon) -> Image? {
+        if coupon.barcodeType == .code128 {
+            return BarcodeGenerator.generateBarcodeView(from: coupon.code)
+        } else { // barcodeType == "QR Code"
+            return BarcodeGenerator.generateQRCodeView(from: coupon.code)
+        }
+    }
 }
