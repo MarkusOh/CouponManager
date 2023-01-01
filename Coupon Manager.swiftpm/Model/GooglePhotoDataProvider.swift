@@ -15,6 +15,7 @@ enum GooglePhotoAlbumsProviderError: Error {
     case rootViewControllerUnavailable
     case unableToFetchAccessToken
     case unsuccessfulResponseCode
+    case mediaItemUnavailable
 }
 
 class GooglePhotosDataProvider: ObservableObject {
@@ -115,8 +116,7 @@ class GooglePhotosDataProvider: ObservableObject {
         self.nextPageToken = receivedData.nextPageToken
         
         guard let mediaItems = receivedData.mediaItems else {
-            try await attempFetchingAlbums(nextPageToken: receivedData.nextPageToken)
-            return
+            throw GooglePhotoAlbumsProviderError.mediaItemUnavailable
         }
         
         await MainActor.run { [unowned self] in
@@ -126,13 +126,26 @@ class GooglePhotosDataProvider: ObservableObject {
     
     func attemptToFetchMorePhotos() {
         Task {
-            do {
-                try await attempFetchingAlbums(nextPageToken: nextPageToken)
-            } catch {
-                await MainActor.run {
-                    errorReminder = error
+            var retrialCount = 0
+            var shouldRetry = false
+            repeat {
+                do {
+                    try await attempFetchingAlbums(nextPageToken: nextPageToken)
+                } catch GooglePhotoAlbumsProviderError.mediaItemUnavailable {
+                    guard retrialCount < 3 else {
+                        shouldRetry = false
+                        errorReminder = GooglePhotoAlbumsProviderError.mediaItemUnavailable
+                        continue
+                    }
+                    
+                    shouldRetry = true
+                    retrialCount += 1
+                } catch {
+                    await MainActor.run {
+                        errorReminder = error
+                    }
                 }
-            }
+            } while shouldRetry
         }
     }
     
