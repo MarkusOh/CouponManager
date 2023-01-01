@@ -5,7 +5,16 @@ struct CouponView: View {
     let balanceSetterHandler: (Double) -> Void
     
     @State private var howMuchSpent = 0.0
-    @State private var isMoneyEditViewOpen = false
+    @State private var isMoneyEditViewOpen = false {
+        didSet {
+            guard oldValue == true && isMoneyEditViewOpen == false else { return }
+            
+            // SwiftUI does not allow changing the value when the textfield is focused
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                howMuchSpent = .zero
+            }
+        }
+    }
     @FocusState var isFocused: Bool
     
     var body: some View {
@@ -45,15 +54,14 @@ struct CouponView: View {
                 Text("\(coupon.balance.formatted())원 남았습니다")
                 Spacer()
                 Button { 
-                    isMoneyEditViewOpen.toggle()
-                    
-                    if !isMoneyEditViewOpen {
+                    if isMoneyEditViewOpen {
                         let newBalance = coupon.balance - howMuchSpent
                         isFocused = false
-                        howMuchSpent = .zero
                         
                         balanceSetterHandler(newBalance)
                     }
+                    
+                    isMoneyEditViewOpen.toggle()
                 } label: { 
                     Image(systemName: isMoneyEditViewOpen ? "minus.circle" : "wonsign.circle")
                         .resizable()
