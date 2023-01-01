@@ -16,65 +16,71 @@ struct MoneyEditView: View {
     @FocusState var isFocused: Bool
     
     var body: some View {
-        NavigationStack {
-            VStack {
-                VStack {
-                    VStack(spacing: 0) {
-                        BarcodeGenerator.barcodeImageViewGenerate(with: coupon)?
-                            .resizable()
-                            .scaledToFit()
-                        Text(coupon.code)
-                            .padding(.bottom)
-                        HStack {
-                            Spacer()
-                            Text("\(coupon.expirationDate.formatted(date: .numeric, time: .omitted)) 만료")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .bold()
-                                .lineLimit(1)
-                                .padding([.bottom, .trailing])
-                        }
-                    }
-                    .background(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .padding()
-                    .shadow(radius: 8)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                HStack {
-                    Text("\(coupon.balance.formatted()) 원")
-                        .font(.title2)
-                        .padding(.leading)
-                    Spacer()
-                }
-                HStack {
-                    Image(systemName: "minus.circle")
-                        .font(.title2)
-                        .foregroundColor(.red)
-                        .bold()
-                    TextField("사용한 금액", value: $spentMoney, formatter: NumberFormatter.currencyFormatter)
-                        .font(.title2)
-                        .focused($isFocused)
-                        .keyboardType(.numberPad)
-                }
-                .padding([.leading, .trailing, .bottom])
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        balanceSetterHandler(coupon.balance - spentMoney)
-                        isPresented.toggle()
-                    }, label: {
-                        Text("반영")
+        VStack {
+            ScrollView(content: {
+                VStack(spacing: 0) {
+                    HStack {
+                        Text(coupon.name)
                             .font(.title2)
                             .bold()
-                    })
+                            .padding()
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .background(.gray.opacity(0.25))
+                    BarcodeGenerator.barcodeImageViewGenerate(with: coupon)?
+                        .resizable()
+                        .scaledToFit()
+                    Text(coupon.code)
+                        .padding(.bottom)
+                    HStack {
+                        Spacer()
+                        Text("\(coupon.expirationDate.formatted(date: .numeric, time: .omitted)) 만료")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .bold()
+                            .lineLimit(1)
+                            .padding([.bottom, .trailing])
+                    }
                 }
-                .padding(.trailing)
+                .background(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding()
+                .shadow(radius: 8)
+            })
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            HStack {
+                Text("\(coupon.balance.formatted()) 원")
+                    .font(.title2)
+                    .padding(.leading)
+                Spacer()
             }
-            .navigationTitle(coupon.name)
-            .onAppear {
-                isFocused = true
+            HStack {
+                Image(systemName: "minus.circle")
+                    .font(.title2)
+                    .foregroundColor(.red)
+                    .bold()
+                TextField("사용한 금액", value: $spentMoney, formatter: NumberFormatter.currencyFormatter)
+                    .font(.title2)
+                    .focused($isFocused)
+                    .keyboardType(.numberPad)
             }
+            .padding([.leading, .trailing, .bottom])
+            HStack {
+                Spacer()
+                Button(action: {
+                    balanceSetterHandler(coupon.balance - spentMoney)
+                    isPresented.toggle()
+                }, label: {
+                    Text("반영")
+                        .font(.title2)
+                        .bold()
+                })
+            }
+            .padding([.trailing, .bottom])
+        }
+        .onAppear {
+            isFocused = true
         }
     }
 }
