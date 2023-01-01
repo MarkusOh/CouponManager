@@ -17,29 +17,40 @@ struct GooglePhotosView: View {
     @State private var isShowingError = false
     
     var body: some View {
-        ZStack {
-            if photosProvider.isGooglePhotosAvailable {
-                photosView
-            } else {
-                authenticationView
+        NavigationStack {
+            ZStack {
+                if photosProvider.isGooglePhotosAvailable {
+                    photosView
+                } else {
+                    authenticationView
+                }
+                
+                if let errorReminder = photosProvider.errorReminder {
+                    Text("Error: \(errorReminder.localizedDescription)")
+                        .padding(.all)
+                        .foregroundColor(.white)
+                        .background(.gray)
+                        .padding(.all)
+                        .opacity(0.8)
+                }
+            }.toolbar {
+                ToolbarItem(placement: .navigationBarLeading, content: {
+                    Button(action: {
+                        // TODO: Remove Google Photos View
+                    }, label: {
+                        Text("Cancel")
+                    })
+                })
             }
-            
-            if let errorReminder = photosProvider.errorReminder {
-                Text("Error: \(errorReminder.localizedDescription)")
-                    .padding(.all
-                    )
-                    .foregroundColor(.white)
-                    .background(.gray)
-                    .padding(.all)
-                    .opacity(0.8)
-            }
+            .navigationTitle("Google Photos")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
     
     var photosView: some View {
         GeometryReader { geometry in
             GooglePhotosGridView(googlePhotoItems: photosProvider.availablePhotos, imageTapAction: { imageUrl in
-                print(imageUrl)
+                // TODO: Detect barcode from imageURL
             }, endOfGridAction: photosProvider.attemptToFetchMorePhotos)
         }
     }

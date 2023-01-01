@@ -29,7 +29,7 @@ struct GooglePhotosGridView: View {
     }
     
     @State private var imageSize: Double = 120.0
-    @State private var spacing: Double = 5.0
+    @State private var spacing: Double = 3.0
     @State private var itemsPerRow: Int = 3
     
     var body: some View {

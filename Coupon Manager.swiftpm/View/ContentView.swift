@@ -36,10 +36,9 @@ struct ContentView: View {
     @State private var selectedPhoto: PhotosPickerItem? = nil
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             barcodeList
         }
-        .navigationViewStyle(.stack)
         .sheet(isPresented: $isShowingScanner) { 
             cameraScannerView
                 .presentationDetents([ .medium ])
