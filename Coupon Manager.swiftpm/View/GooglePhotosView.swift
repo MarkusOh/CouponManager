@@ -16,8 +16,6 @@ struct GooglePhotosView: View {
     @State private var errorMessage = ErrorMessage.empty
     @State private var isShowingError = false
     
-    static let imageSize = 80.0
-    
     var body: some View {
         ZStack {
             if photosProvider.isGooglePhotosAvailable {
@@ -40,48 +38,32 @@ struct GooglePhotosView: View {
     
     var photosView: some View {
         GeometryReader { geometry in
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: GooglePhotosView.imageSize))], spacing: 10) {
-                    ForEach(Array(photosProvider.availablePhotos.enumerated()), id: \.element.id) { (index, photo) in
-                        Button {
-                            // TODO: Fetch photo to detect barcode
-                            
-                        } label: {
-                            AsyncImage(url: URL(string: photo.baseUrl.absoluteString.appending("=w400-h400-c"))!, content: { image in
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                                    .imageIconModifier()
-                            }, placeholder: {
-                                Image(systemName: "photo")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .imageIconModifier()
-                            })
-                            .padding(.all)
-                        }
-                        .onAppear {
-                            guard index == photosProvider.availablePhotos.count - 1 else {
-                                return
-                            }
-                            
-                            photosProvider.attemptToFetchMorePhotos()
-                        }
-                    }
-                }
-            }
+            GooglePhotosGridView(googlePhotoItems: photosProvider.availablePhotos, imageTapAction: { imageUrl in
+                print(imageUrl)
+            }, endOfGridAction: photosProvider.attemptToFetchMorePhotos)
         }
     }
     
     var authenticationView: some View {
         GeometryReader { geometry in
             VStack {
-                Button("Sign in with Google", action: signInAndConsentAction)
-                    .padding(.all, 10)
-                    .background(Color.blue)
-                    .foregroundColor(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
-                    .shadow(radius: 1, x: 1.5, y: 1.5)
+                VStack {
+                    Text("To use Google Photos, you need to login to Google\n and give us permission to access your library.")
+                        .multilineTextAlignment(.center)
+                        .padding(.bottom)
+                    Button("Sign in with Google", action: signInAndConsentAction)
+                        .padding(.all, 10)
+                        .padding(.horizontal, 10)
+                        .font(.system(.body).bold())
+                        .background(Color.blue)
+                        .foregroundColor(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                        .shadow(radius: 5)
+                }
+                .padding()
+                .background(Color(uiColor: .systemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .shadow(radius: 5)
             }.frame(width: geometry.size.width, height: geometry.size.height)
         }
     }
@@ -121,16 +103,11 @@ struct GooglePhotosView: View {
     }
 }
 
-fileprivate struct ImageIconModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .frame(width: GooglePhotosView.imageSize, height: GooglePhotosView.imageSize)
-            .clipShape(Rectangle())
-    }
-}
-
-extension View {
-    fileprivate func imageIconModifier() -> some View {
-        self.modifier(ImageIconModifier())
+struct GooglePhotosView_Previews: PreviewProvider {
+    @State static var errorMessage: ErrorMessage = .empty
+    @State static var errorShow: Bool = false
+    
+    static var previews: some View {
+        GooglePhotosView(googlePhotosError: $errorMessage, googlePhotosErrorShow: $errorShow)
     }
 }
