@@ -10,11 +10,11 @@ import SwiftUI
 struct GooglePhotosView: View {
     @ObservedObject var photosProvider = GooglePhotosDataProvider.shared
     
-    @Binding var googlePhotosError: ErrorMessage
-    @Binding var googlePhotosErrorShow: Bool
-    
     @State private var errorMessage = ErrorMessage.empty
     @State private var isShowingError = false
+    
+    @Binding var isPresented: Bool
+    @Binding var selectedPhoto: UIImage?
     
     var body: some View {
         NavigationStack {
@@ -36,7 +36,7 @@ struct GooglePhotosView: View {
             }.toolbar {
                 ToolbarItem(placement: .navigationBarLeading, content: {
                     Button(action: {
-                        // TODO: Remove Google Photos View
+                        isPresented.toggle()
                     }, label: {
                         Text("Cancel")
                     })
@@ -49,9 +49,25 @@ struct GooglePhotosView: View {
     
     var photosView: some View {
         GeometryReader { geometry in
-            GooglePhotosGridView(googlePhotoItems: photosProvider.availablePhotos, imageTapAction: { imageUrl in
-                // TODO: Detect barcode from imageURL
-            }, endOfGridAction: photosProvider.attemptToFetchMorePhotos)
+            GooglePhotosGridView(googlePhotoItems: photosProvider.availablePhotos, imageTapAction: handleSelectedImage, endOfGridAction: photosProvider.attemptToFetchMorePhotos)
+        }
+    }
+    
+    func handleSelectedImage(imageUrl: URL) {
+        Task {
+            do {
+                let (data, response) = try await URLSession(configuration: .default).data(for: URLRequest(url: imageUrl))
+                let responseCode = (response as! HTTPURLResponse).statusCode
+                
+                guard (200..<300).contains(responseCode) else {
+                    throw GooglePhotoAlbumsProviderError.unsuccessfulResponseCode
+                }
+                
+                selectedPhoto = UIImage(data: data)!
+                isPresented.toggle()
+            } catch {
+                // TODO: If failed, tell the user why the image fetching failed
+            }
         }
     }
     
@@ -114,11 +130,29 @@ struct GooglePhotosView: View {
     }
 }
 
+struct GooglePhotosPicker: ViewModifier {
+    @Binding var isPresented: Bool
+    @Binding var selectedPhoto: UIImage?
+    
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $isPresented, content: {
+                GooglePhotosView(isPresented: $isPresented, selectedPhoto: $selectedPhoto)
+            })
+    }
+}
+
+extension View {
+    func googlePhotosPicker(isPresented: Binding<Bool>, selectedPhoto: Binding<UIImage?>) -> some View {
+        self.modifier(GooglePhotosPicker(isPresented: isPresented, selectedPhoto: selectedPhoto))
+    }
+}
+
 struct GooglePhotosView_Previews: PreviewProvider {
-    @State static var errorMessage: ErrorMessage = .empty
-    @State static var errorShow: Bool = false
+    @State static var isPresented = true
+    @State static var selectedPhoto: UIImage?
     
     static var previews: some View {
-        GooglePhotosView(googlePhotosError: $errorMessage, googlePhotosErrorShow: $errorShow)
+        GooglePhotosView(isPresented: $isPresented, selectedPhoto: $selectedPhoto)
     }
 }

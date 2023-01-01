@@ -33,7 +33,8 @@ struct ContentView: View {
     
     @State private var isShowingGooglePhotosView = false
     
-    @State private var selectedPhoto: PhotosPickerItem? = nil
+    @State private var selectedPhotoFromNative: PhotosPickerItem? = nil
+    @State private var selectedPhotoFromGoogle: UIImage? = nil
     
     var body: some View {
         NavigationStack {
@@ -49,23 +50,35 @@ struct ContentView: View {
                 dataProvider.create(coupon: receivedCoupon)
             }).presentationDetents([ .medium ])
         })
-        .sheet(isPresented: $isShowingGooglePhotosView, content: {
-            GooglePhotosView(googlePhotosError: $errorMessage, googlePhotosErrorShow: $isShowingError)
-        })
-        .photosPicker(isPresented: $isShowingPhotoPicker, selection: $selectedPhoto)
-        .onChange(of: selectedPhoto, perform: { newItem in
+        .googlePhotosPicker(isPresented: $isShowingGooglePhotosView, selectedPhoto: $selectedPhotoFromGoogle)
+        .photosPicker(isPresented: $isShowingPhotoPicker, selection: $selectedPhotoFromNative)
+        .onChange(of: selectedPhotoFromNative, perform: { newItem in
             Task(priority: .background) {
                 do {
                     guard let newItem = newItem else { throw ContentViewError.nilFound }
                     let data = try await newItem.loadTransferable(type: Data.self)
                     guard let data = data else { throw ContentViewError.unableToLoadTransferable }
-                    let result = try await fetchCodeAndType(from: data)
+                    let result = try await fetchCodeAndType(from: UIImage(data: data)!)
                     handleScan(result: .success(result))
                 } catch {
                     handleScan(result: .failure(error))
                 }
             }
         })
+        .onChange(of: selectedPhotoFromGoogle) { newImage in
+            guard let newImage = newImage else {
+                return
+            }
+            
+            Task(priority: .background) {
+                do {
+                    let result = try await fetchCodeAndType(from: newImage)
+                    handleScan(result: .success(result))
+                } catch {
+                    handleScan(result: .failure(error))
+                }
+            }
+        }
     }
 }
 
@@ -126,9 +139,8 @@ extension ContentView {
         }
     }
     
-    func fetchCodeAndType(from data: Data) async throws -> (String, BarcodeType) {
-        guard let image = UIImage(data: data) else { throw ContentViewError.dataToUIImageFail }
-        let observationResult = try await BarcodeDetectorFromImage.fetchBarcodeString(from: image)
+    func fetchCodeAndType(from uiImage: UIImage) async throws -> (String, BarcodeType) {
+        let observationResult = try await BarcodeDetectorFromImage.fetchBarcodeString(from: uiImage)
         return observationResult
     }
     
