@@ -21,6 +21,8 @@ struct ContentView: View {
     @State private var isShowingPhotoPicker = false
     
     // Error Title and Message
+    @State private var error: Error? = nil
+    
     @State private var errorMessage = ErrorMessage.empty
     @State private var isShowingError = false
     
@@ -33,8 +35,7 @@ struct ContentView: View {
     
     @State private var isShowingGooglePhotosView = false
     
-    @State private var selectedPhotoFromNative: PhotosPickerItem? = nil
-    @State private var selectedPhotoFromGoogle: UIImage? = nil
+    @State private var selectedPhoto: UIImage? = nil
     
     var body: some View {
         NavigationStack {
@@ -50,22 +51,9 @@ struct ContentView: View {
                 dataProvider.create(coupon: receivedCoupon)
             }).presentationDetents([ .medium ])
         })
-        .googlePhotosPicker(isPresented: $isShowingGooglePhotosView, selectedPhoto: $selectedPhotoFromGoogle)
-        .photosPicker(isPresented: $isShowingPhotoPicker, selection: $selectedPhotoFromNative)
-        .onChange(of: selectedPhotoFromNative, perform: { newItem in
-            Task(priority: .background) {
-                do {
-                    guard let newItem = newItem else { throw ContentViewError.nilFound }
-                    let data = try await newItem.loadTransferable(type: Data.self)
-                    guard let data = data else { throw ContentViewError.unableToLoadTransferable }
-                    let result = try await fetchCodeAndType(from: UIImage(data: data)!)
-                    handleScan(result: .success(result))
-                } catch {
-                    handleScan(result: .failure(error))
-                }
-            }
-        })
-        .onChange(of: selectedPhotoFromGoogle) { newImage in
+        .googlePhotosPicker(isPresented: $isShowingGooglePhotosView, selectedPhoto: $selectedPhoto, error: $error)
+        .nativePhotoPicker(isPresented: $isShowingPhotoPicker, selectedImage: $selectedPhoto, error: $error)
+        .onChange(of: selectedPhoto) { newImage in
             guard let newImage = newImage else {
                 return
             }

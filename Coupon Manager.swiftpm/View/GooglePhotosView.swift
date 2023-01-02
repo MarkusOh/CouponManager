@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct GooglePhotosView: View {
+    // TODO: There is no way to pass the error from photosProvider to here.
     @ObservedObject var photosProvider = GooglePhotosDataProvider.shared
     
     @State private var errorMessage = ErrorMessage.empty
@@ -15,6 +16,7 @@ struct GooglePhotosView: View {
     
     @Binding var isPresented: Bool
     @Binding var selectedPhoto: UIImage?
+    @Binding var error: Error?
     
     var body: some View {
         NavigationStack {
@@ -25,14 +27,7 @@ struct GooglePhotosView: View {
                     authenticationView
                 }
                 
-                if let errorReminder = photosProvider.errorReminder {
-                    Text("Error: \(errorReminder.localizedDescription)")
-                        .padding(.all)
-                        .foregroundColor(.white)
-                        .background(.gray)
-                        .padding(.all)
-                        .opacity(0.8)
-                }
+                SnackBarView(isShowing: $isShowingError, title: errorMessage.title, message: errorMessage.detail)
             }.toolbar {
                 ToolbarItem(placement: .navigationBarLeading, content: {
                     Button(action: {
@@ -75,7 +70,16 @@ struct GooglePhotosView: View {
         GeometryReader { geometry in
             VStack {
                 VStack {
-                    Text("To use Google Photos, you need to login to Google\n and give us permission to access your library.")
+                    HStack {
+                        Spacer()
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .resizable()
+                            .foregroundColor(.yellow)
+                            .frame(width: 30, height: 30)
+                            .padding(.bottom, 8)
+                        Spacer()
+                    }
+                    Text("Google Photos 사용 전, Google 로그인과 라이브러리 접근 권한이 필요합니다")
                         .multilineTextAlignment(.center)
                         .padding(.bottom)
                     Button("Sign in with Google", action: signInAndConsentAction)
@@ -90,6 +94,7 @@ struct GooglePhotosView: View {
                 .padding()
                 .background(Color(uiColor: .systemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
+                .frame(maxWidth: 320)
                 .shadow(radius: 5)
             }.frame(width: geometry.size.width, height: geometry.size.height)
         }
@@ -101,13 +106,13 @@ struct GooglePhotosView: View {
             do {
                 didUserSignIn = try await GooglePhotosDataProvider.shared.askForUserSignIn()
             } catch {
-                errorMessage = ErrorMessage(title: "Error found during Sign in", detail: error.localizedDescription)
+                errorMessage = ErrorMessage(title: "로그인 중 오류 발견", detail: error.localizedDescription)
                 isShowingError = true
                 return
             }
             
             guard didUserSignIn else {
-                errorMessage = ErrorMessage(title: "User did not sign in", detail: "Please sign in to use Google Photos library")
+                errorMessage = ErrorMessage(title: "사용자가 로그인하지 않음", detail: "Google Photo 를 사용하려면 로그인하세요.")
                 isShowingError = true
                 return
             }
@@ -116,13 +121,13 @@ struct GooglePhotosView: View {
             do {
                 didUserConsent = try await GooglePhotosDataProvider.shared.askForUsersConsent()
             } catch {
-                errorMessage = ErrorMessage(title: "Error found during Sign in", detail: error.localizedDescription)
+                errorMessage = ErrorMessage(title: "로그인 중 오류 발견", detail: error.localizedDescription)
                 isShowingError = true
                 return
             }
             
             guard didUserConsent else {
-                errorMessage = ErrorMessage(title: "User did not consent", detail: "Please allow our app to access your library to use Google Photos library")
+                errorMessage = ErrorMessage(title: "사용자가 동의하지 않음", detail: "Google 포토 라이브러리를 사용하려면 앱에서 라이브러리에 액세스할 수 있도록 허용하세요.")
                 isShowingError = true
                 return
             }
@@ -133,26 +138,28 @@ struct GooglePhotosView: View {
 struct GooglePhotosPicker: ViewModifier {
     @Binding var isPresented: Bool
     @Binding var selectedPhoto: UIImage?
+    @Binding var error: Error?
     
     func body(content: Content) -> some View {
         content
             .sheet(isPresented: $isPresented, content: {
-                GooglePhotosView(isPresented: $isPresented, selectedPhoto: $selectedPhoto)
+                GooglePhotosView(isPresented: $isPresented, selectedPhoto: $selectedPhoto, error: $error)
             })
     }
 }
 
 extension View {
-    func googlePhotosPicker(isPresented: Binding<Bool>, selectedPhoto: Binding<UIImage?>) -> some View {
-        self.modifier(GooglePhotosPicker(isPresented: isPresented, selectedPhoto: selectedPhoto))
+    func googlePhotosPicker(isPresented: Binding<Bool>, selectedPhoto: Binding<UIImage?>, error: Binding<Error?>) -> some View {
+        self.modifier(GooglePhotosPicker(isPresented: isPresented, selectedPhoto: selectedPhoto, error: error))
     }
 }
 
 struct GooglePhotosView_Previews: PreviewProvider {
     @State static var isPresented = true
     @State static var selectedPhoto: UIImage?
+    @State static var error: Error?
     
     static var previews: some View {
-        GooglePhotosView(isPresented: $isPresented, selectedPhoto: $selectedPhoto)
+        GooglePhotosView(isPresented: $isPresented, selectedPhoto: $selectedPhoto, error: $error)
     }
 }
