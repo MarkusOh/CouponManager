@@ -11,8 +11,17 @@ struct GooglePhotosView: View {
     // TODO: There is no way to pass the error from photosProvider to here.
     @ObservedObject var photosProvider = GooglePhotosDataProvider.shared
     
-    @State private var errorMessage = ErrorMessage.empty
-    @State private var isShowingError = false
+    @State private var loginError: Error? = nil
+    
+    private var isShowingError: Binding<Bool> {
+        Binding(get: {
+            loginError != nil
+        }, set: { newValue in
+            if !newValue {
+                loginError = nil
+            }
+        })
+    }
     
     @Binding var isPresented: Bool
     @Binding var selectedPhoto: UIImage?
@@ -27,7 +36,7 @@ struct GooglePhotosView: View {
                     authenticationView
                 }
                 
-                SnackBarView(isShowing: $isShowingError, title: errorMessage.title, message: errorMessage.detail)
+                SnackBarView(isShowing: isShowingError, title: "아이구! 로그인 중 에러가 있었습니다", message: loginError?.localizedDescription ?? "에러가 없습니다")
             }.toolbar {
                 ToolbarItem(placement: .navigationBarLeading, content: {
                     Button(action: {
@@ -61,7 +70,7 @@ struct GooglePhotosView: View {
                 selectedPhoto = UIImage(data: data)!
                 isPresented.toggle()
             } catch {
-                // TODO: If failed, tell the user why the image fetching failed
+                self.error = error
             }
         }
     }
@@ -106,14 +115,12 @@ struct GooglePhotosView: View {
             do {
                 didUserSignIn = try await GooglePhotosDataProvider.shared.askForUserSignIn()
             } catch {
-                errorMessage = ErrorMessage(title: "로그인 중 오류 발견", detail: error.localizedDescription)
-                isShowingError = true
+                loginError = error
                 return
             }
             
             guard didUserSignIn else {
-                errorMessage = ErrorMessage(title: "사용자가 로그인하지 않음", detail: "Google Photo 를 사용하려면 로그인하세요.")
-                isShowingError = true
+                loginError = GoogleSignInAndConsentError.userDidNotLogin
                 return
             }
             
@@ -121,18 +128,22 @@ struct GooglePhotosView: View {
             do {
                 didUserConsent = try await GooglePhotosDataProvider.shared.askForUsersConsent()
             } catch {
-                errorMessage = ErrorMessage(title: "로그인 중 오류 발견", detail: error.localizedDescription)
-                isShowingError = true
+                loginError = GoogleSignInAndConsentError.userDidNotChoose
                 return
             }
             
             guard didUserConsent else {
-                errorMessage = ErrorMessage(title: "사용자가 동의하지 않음", detail: "Google 포토 라이브러리를 사용하려면 앱에서 라이브러리에 액세스할 수 있도록 허용하세요.")
-                isShowingError = true
+                loginError = GoogleSignInAndConsentError.userDidNotGiveAccessPermission
                 return
             }
         }
     }
+}
+
+enum GoogleSignInAndConsentError: Error {
+    case userDidNotLogin
+    case userDidNotChoose
+    case userDidNotGiveAccessPermission
 }
 
 struct GooglePhotosPicker: ViewModifier {

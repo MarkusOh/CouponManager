@@ -3,17 +3,11 @@ import PhotosUI
 import SwiftUI
 import GoogleSignIn
 
-struct ErrorMessage {
-    static let empty: ErrorMessage = ErrorMessage(title: "", detail: "")
-    
-    var title: String
-    var detail: String
-}
-
 enum ContentViewError: Error {
     case dataToUIImageFail
     case nilFound
     case unableToLoadTransferable
+    case noError
 }
 
 struct ContentView: View {
@@ -22,9 +16,6 @@ struct ContentView: View {
     
     // Error Title and Message
     @State private var error: Error? = nil
-    
-    @State private var errorMessage = ErrorMessage.empty
-    @State private var isShowingError = false
     
     // Sheet View for getting balance and expiration date from User
     @State private var isShowingInputSheet = false
@@ -37,6 +28,16 @@ struct ContentView: View {
     
     @State private var selectedPhoto: UIImage? = nil
     
+    private var isShowingError: Binding<Bool> {
+        Binding(get: {
+            error != nil
+        }, set: { newValue in
+            if !newValue {
+                error = nil
+            }
+        })
+    }
+    
     var body: some View {
         NavigationStack {
             barcodeList
@@ -45,7 +46,7 @@ struct ContentView: View {
             cameraScannerView
                 .presentationDetents([ .medium ])
         }
-        .modifier(ErrorAlert(isShowingError: $isShowingError, errorMessage: errorMessage))
+        .modifier(ErrorAlert(isShowingError: isShowingError, error: error ?? ContentViewError.noError))
         .sheet(isPresented: $isShowingInputSheet, content: {
             CouponInfoInputView(couponCode: $couponCode, barcodeType: $couponBarcodeType, inputCompletionHandler: { receivedCoupon in
                 dataProvider.create(coupon: receivedCoupon)
@@ -72,14 +73,14 @@ struct ContentView: View {
 
 struct ErrorAlert: ViewModifier {
     @Binding var isShowingError: Bool
-    let errorMessage: ErrorMessage 
+    var error: Error
     
     func body(content: Content) -> some View {
         content
-            .alert(errorMessage.title, isPresented: $isShowingError, actions: {
+            .alert("아이구! 에러가 있었습니다", isPresented: $isShowingError, actions: {
                 Button("OK", action: {})
             }, message: {
-                Text(errorMessage.detail)
+                Text(error.localizedDescription)
             })
     }
 }
@@ -113,9 +114,6 @@ extension ContentView {
                 }
             })
         })
-        .alert(isPresented: $isShowingError) {
-            Alert(title: Text(errorMessage.title), message: Text(errorMessage.detail), dismissButton: .default(Text("OK")))
-        }
     }
     
     var cameraScannerView: some View {
@@ -143,9 +141,7 @@ extension ContentView {
                 isShowingInputSheet.toggle()
                 
             case .failure(let resultError):
-                errorMessage.title = "Error Found"
-                errorMessage.detail = resultError.localizedDescription
-                isShowingError.toggle()
+                error = resultError
             }
         }
     }
