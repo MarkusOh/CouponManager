@@ -13,6 +13,7 @@ enum ContentViewError: Error {
 struct ContentView: View {
     @State private var isShowingScanner = false
     @State private var isShowingPhotoPicker = false
+    @State private var isShowingCouponShop = false
     
     // Error Title and Message
     @State private var error: Error? = nil
@@ -54,6 +55,7 @@ struct ContentView: View {
         })
         .googlePhotosPicker(isPresented: $isShowingGooglePhotosView, selectedPhoto: $selectedPhoto, error: $error)
         .nativePhotoPicker(isPresented: $isShowingPhotoPicker, selectedImage: $selectedPhoto, error: $error)
+        .couponShop(isPresented: $isShowingCouponShop)
         .onChange(of: selectedPhoto) { newImage in
             guard let newImage = newImage else {
                 return
@@ -113,6 +115,19 @@ extension ContentView {
                     Image(systemName: "plus")
                 }
             })
+            
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    isShowingCouponShop.toggle()
+                }, label: {
+                    Image("ShoppingCart")
+                        .resizable()
+                        .renderingMode(.template)
+                        .foregroundColor(.accentColor)
+                        .scaledToFit()
+                        .frame(width:30)
+                })
+            }
         })
     }
     
