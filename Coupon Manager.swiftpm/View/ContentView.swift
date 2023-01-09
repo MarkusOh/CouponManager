@@ -19,9 +19,8 @@ struct ContentView: View {
     @State private var error: Error? = nil
     
     // Sheet View for getting balance and expiration date from User
-    @State private var isShowingInputSheet = false
-    @State private var couponCode = ""
-    @State private var couponBarcodeType: BarcodeType = .code128
+    @State private var couponCode: String?
+    @State private var couponBarcodeType: BarcodeType?
     
     @StateObject var dataProvider = CouponDataProvider.shared
     
@@ -43,18 +42,10 @@ struct ContentView: View {
         NavigationStack {
             barcodeList
         }
-        .sheet(isPresented: $isShowingScanner) { 
-            cameraScannerView
-                .presentationDetents([ .medium ])
-        }
         .modifier(ErrorAlert(isShowingError: isShowingError, error: error ?? ContentViewError.noError))
-        .sheet(isPresented: $isShowingInputSheet, content: {
-            CouponInfoInputView(couponCode: $couponCode, barcodeType: $couponBarcodeType, inputCompletionHandler: { receivedCoupon in
-                dataProvider.create(coupon: receivedCoupon)
-            }).presentationDetents([ .medium ])
-        })
         .googlePhotosPicker(isPresented: $isShowingGooglePhotosView, selectedPhoto: $selectedPhoto, error: $error)
         .nativePhotoPicker(isPresented: $isShowingPhotoPicker, selectedImage: $selectedPhoto, error: $error)
+        .cameraView(isPresented: $isShowingScanner, couponCode: $couponCode, couponBarcodeType: $couponBarcodeType)
         .couponShop(isPresented: $isShowingCouponShop)
         .onChange(of: selectedPhoto) { newImage in
             guard let newImage = newImage else {
@@ -131,29 +122,17 @@ extension ContentView {
         })
     }
     
-    var cameraScannerView: some View {
-        GeometryReader { geometry in
-            CameraView { barcodeString, barcodeType  in
-                handleScan(result: .success((barcodeString, barcodeType)))
-            }.frame(width: geometry.size.width, height: geometry.size.height)
-                .clipped()
-        }
-    }
-    
     func fetchCodeAndType(from uiImage: UIImage) async throws -> (String, BarcodeType) {
         let observationResult = try await BarcodeDetectorFromImage.fetchBarcodeString(from: uiImage)
         return observationResult
     }
     
     func handleScan(result: Result<(String, BarcodeType), Error>) {
-        isShowingScanner = false
-        
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             switch result {
             case .success(let (barcodeString, barcodeType)):
                 couponCode = barcodeString
                 couponBarcodeType = barcodeType
-                isShowingInputSheet.toggle()
                 
             case .failure(let resultError):
                 error = resultError
