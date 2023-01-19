@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+enum GooglePhotosViewError: Error {
+    case unsuccessfulResponseCode
+    case dataToImageConversionFail
+}
+
 struct GooglePhotosView: View {
     // TODO: There is no way to pass the error from photosProvider to here.
     @ObservedObject var photosProvider = GooglePhotosDataProvider.shared
@@ -24,7 +29,6 @@ struct GooglePhotosView: View {
     }
     
     @Binding var isPresented: Bool
-    @Binding var selectedPhoto: UIImage?
     @Binding var error: Error?
     
     var body: some View {
@@ -37,7 +41,8 @@ struct GooglePhotosView: View {
                 }
                 
                 SnackBarView(isShowing: isShowingError, title: "아이구! 로그인 중 에러가 있었습니다", message: loginError?.localizedDescription ?? "에러가 없습니다")
-            }.toolbar {
+            }
+            .toolbar {
                 ToolbarItem(placement: .navigationBarLeading, content: {
                     Button(action: {
                         isPresented.toggle()
@@ -53,25 +58,7 @@ struct GooglePhotosView: View {
     
     var photosView: some View {
         GeometryReader { geometry in
-            GooglePhotosGridView(googlePhotoItems: photosProvider.availablePhotos, imageTapAction: handleSelectedImage, endOfGridAction: photosProvider.attemptToFetchMorePhotos)
-        }
-    }
-    
-    func handleSelectedImage(imageUrl: URL) {
-        Task {
-            do {
-                let (data, response) = try await URLSession(configuration: .default).data(for: URLRequest(url: imageUrl))
-                let responseCode = (response as! HTTPURLResponse).statusCode
-                
-                guard (200..<300).contains(responseCode) else {
-                    throw GooglePhotoAlbumsProviderError.unsuccessfulResponseCode
-                }
-                
-                selectedPhoto = UIImage(data: data)!
-                isPresented.toggle()
-            } catch {
-                self.error = error
-            }
+            GooglePhotosGridView(googlePhotoItems: photosProvider.availablePhotos, endOfGridAction: photosProvider.attemptToFetchMorePhotos, error: $error, isPresented: $isPresented)
         }
     }
     
@@ -148,29 +135,27 @@ enum GoogleSignInAndConsentError: Error {
 
 struct GooglePhotosPicker: ViewModifier {
     @Binding var isPresented: Bool
-    @Binding var selectedPhoto: UIImage?
     @Binding var error: Error?
     
     func body(content: Content) -> some View {
         content
             .sheet(isPresented: $isPresented, content: {
-                GooglePhotosView(isPresented: $isPresented, selectedPhoto: $selectedPhoto, error: $error)
+                GooglePhotosView(isPresented: $isPresented, error: $error)
             })
     }
 }
 
 extension View {
     func googlePhotosPicker(isPresented: Binding<Bool>, selectedPhoto: Binding<UIImage?>, error: Binding<Error?>) -> some View {
-        self.modifier(GooglePhotosPicker(isPresented: isPresented, selectedPhoto: selectedPhoto, error: error))
+        self.modifier(GooglePhotosPicker(isPresented: isPresented, error: error))
     }
 }
 
 struct GooglePhotosView_Previews: PreviewProvider {
     @State static var isPresented = true
-    @State static var selectedPhoto: UIImage?
     @State static var error: Error?
     
     static var previews: some View {
-        GooglePhotosView(isPresented: $isPresented, selectedPhoto: $selectedPhoto, error: $error)
+        GooglePhotosView(isPresented: $isPresented, error: $error)
     }
 }

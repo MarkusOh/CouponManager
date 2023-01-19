@@ -3,7 +3,6 @@ import Combine
 
 struct CouponInfoInputView: View {
     let dataProvider = CouponDataProvider.shared
-    @Environment(\.dismiss) var dismiss
     
     var couponCode: String
     var barcodeType: BarcodeType
@@ -11,6 +10,8 @@ struct CouponInfoInputView: View {
     @State var couponName: String = ""
     @State var couponBalance: Double = 0.0
     @State var couponExpirationDate: Date = .now
+    
+    @Binding var isPresented: Bool
     
     var body: some View {
         Form {
@@ -34,7 +35,7 @@ struct CouponInfoInputView: View {
             
             Button("입력 완료", action: {
                 dataProvider.create(coupon: Coupon(name: couponName, code: couponCode, balance: couponBalance, expirationDate: couponExpirationDate, barcodeType: barcodeType))
-                dismiss()
+                isPresented = false
             })
         }
         .navigationTitle("쿠폰입력")

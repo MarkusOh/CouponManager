@@ -9,15 +9,18 @@ import SwiftUI
 
 struct GooglePhotosGridView: View {
     var googlePhotoItems: [GooglePhotoItem]
-    let imageTapAction: (URL) -> Void
     let endOfGridAction: () -> Void
     let isForPreview: Bool
     
-    init(googlePhotoItems: [GooglePhotoItem], imageTapAction: @escaping (URL) -> Void, endOfGridAction: @escaping () -> Void, isForPreview: Bool = false) {
+    @Binding var error: Error?
+    @Binding var isPresented: Bool
+    
+    init(googlePhotoItems: [GooglePhotoItem], endOfGridAction: @escaping () -> Void, isForPreview: Bool = false, error: Binding<Error?>, isPresented: Binding<Bool>) {
         self.googlePhotoItems = googlePhotoItems
-        self.imageTapAction = imageTapAction
         self.endOfGridAction = endOfGridAction
         self.isForPreview = isForPreview
+        self._error = error
+        self._isPresented = isPresented
     }
     
     func photoThumbnailUrl(from url: URL) -> URL {
@@ -32,15 +35,17 @@ struct GooglePhotosGridView: View {
     @State private var spacing: Double = 3.0
     @State private var itemsPerRow: Int = 3
     
+    @State private var selectedPhoto: UIImage?
+    
     var body: some View {
         GeometryReader { geo in
             ScrollView {
                 LazyVGrid(columns: Array(repeating: GridItem(.fixed(geo.size.width / Double(itemsPerRow)), spacing: 0), count: itemsPerRow), spacing: 0) {
                     ForEach(Array(googlePhotoItems.enumerated()), id: \.element.id) { (index, photo) in
                         HStack {
-                            Button {
-                                imageTapAction(photo.baseUrl)
-                            } label: {
+                            NavigationLink(destination: {
+                                BarcodeSelectionView(localImage: nil, url: photo.baseUrl, error: $error, isPresented: $isPresented)
+                            }, label: {
                                 AsyncImage(url: photoThumbnailUrl(from: photo.baseUrl), content: { image in
                                     image
                                         .resizable()
@@ -53,7 +58,7 @@ struct GooglePhotosGridView: View {
                                         .scaledToFit()
                                         .imageIconModifier(imageWidth: imageSize)
                                 })
-                            }
+                            })
                             .padding(.bottom, spacing / 2)
                             .onAppear {
                                 guard index == googlePhotoItems.count - 1 else {
@@ -129,11 +134,9 @@ struct GooglePhotosGridView_Previews: PreviewProvider {
     }
 
     static var previews: some View {
-        GooglePhotosGridView(googlePhotoItems: mockData, imageTapAction: { _ in
+        GooglePhotosGridView(googlePhotoItems: mockData, endOfGridAction: {
 
-        }, endOfGridAction: {
-
-        }, isForPreview: true)
+        }, isForPreview: true, error: .constant(nil), isPresented: .constant(true))
     }
 }
 
