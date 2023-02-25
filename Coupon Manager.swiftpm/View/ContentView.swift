@@ -39,7 +39,7 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        CompatibilityNavigationStack {
             barcodeList
         }
         .modifier(ErrorAlert(isShowingError: isShowingError, error: error ?? ContentViewError.noError))

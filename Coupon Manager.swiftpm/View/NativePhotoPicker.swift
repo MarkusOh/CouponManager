@@ -18,32 +18,10 @@ struct NativePhotoPicker: ViewModifier {
     @Binding var selectedImage: UIImage?
     @Binding var error: Error?
     
-    @State private var photosPickerItem: PhotosPickerItem? = nil
-    
     func body(content: Content) -> some View {
         content
-            .photosPicker(isPresented: $isPresented, selection: $photosPickerItem, matching: .images)
-            .onChange(of: photosPickerItem) { photo in
-                guard let photo = photo else { return }
-                
-                Task(priority: .userInitiated) {
-                    do {
-                        let data = try await photo.loadTransferable(type: Data.self)
-                        
-                        guard let data = data else {
-                            throw NativePhotoPickerError.dataUnavailable
-                        }
-                        
-                        guard let image = UIImage(data: data) else {
-                            throw NativePhotoPickerError.imageUnavailable
-                        }
-                        
-                        selectedImage = image
-                        
-                    } catch {
-                        self.error = error
-                    }
-                }
+            .sheet(isPresented: $isPresented) {
+                NativePhotoPickerRepresentable(selectedImage: $selectedImage, error: $error)
             }
     }
 }

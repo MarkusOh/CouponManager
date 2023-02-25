@@ -10,7 +10,7 @@ import AppleProductTypes
 let package = Package(
     name: "Coupon Manager",
     platforms: [
-        .iOS("16.0")
+        .iOS("15.0")
     ],
     products: [
         .iOSApplication(

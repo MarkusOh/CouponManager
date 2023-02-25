@@ -32,7 +32,7 @@ struct GooglePhotosView: View {
     @Binding var error: Error?
     
     var body: some View {
-        NavigationStack {
+        CompatibilityNavigationStack {
             ZStack {
                 if photosProvider.isGooglePhotosAvailable {
                     photosView
@@ -88,7 +88,7 @@ struct GooglePhotosView: View {
                         .shadow(radius: 5)
                 }
                 .padding()
-                .background(Color(uiColor: .systemBackground))
+                .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .frame(maxWidth: 320)
                 .shadow(radius: 5)

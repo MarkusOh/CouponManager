@@ -56,7 +56,7 @@ struct MoneyEditView: View {
                 Spacer()
             }
             HStack {
-                Image(systemName: "minus.circle")
+                Text("⊝")
                     .font(.title2)
                     .foregroundColor(.red)
                     .bold()

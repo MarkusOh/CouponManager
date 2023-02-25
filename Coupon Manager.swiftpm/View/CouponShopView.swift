@@ -22,9 +22,9 @@ struct CouponShopView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        CompatibilityNavigationStack {
             VStack {
-                ScrollView(.horizontal) {
+                ScrollView(.horizontal, showsIndicators: false) {
                     HStack {
                         ForEach(Array(zip(availableBrandsKeys.indices, availableBrandsKeys)), id: \.1) { (idx, brandName) in
                             VStack {
@@ -60,7 +60,6 @@ struct CouponShopView: View {
                     }
                     .padding(.horizontal)
                 }
-                .scrollIndicators(.hidden)
                 
                 List(dataProvider.availableItems[selectedBrandName] ?? []) { item in
                     Button(action: {
