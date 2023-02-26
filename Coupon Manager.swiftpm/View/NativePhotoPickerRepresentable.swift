@@ -48,12 +48,6 @@ struct NativePhotoPickerRepresentable: UIViewControllerRepresentable {
             }
             
             firstResult.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] data, error in
-                defer {
-                    DispatchQueue.main.async {
-                        picker.dismiss(animated: true)
-                    }
-                }
-                
                 guard error == nil else {
                     self?.parent.error = error
                     return

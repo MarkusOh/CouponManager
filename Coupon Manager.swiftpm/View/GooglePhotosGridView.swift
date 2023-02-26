@@ -44,7 +44,7 @@ struct GooglePhotosGridView: View {
                     ForEach(Array(googlePhotoItems.enumerated()), id: \.element.id) { (index, photo) in
                         HStack {
                             NavigationLink(destination: {
-                                BarcodeSelectionView(localImage: nil, url: photo.baseUrl, error: $error, isPresented: $isPresented)
+                                BarcodeSelectionView(localImage: .constant(nil), url: photo.baseUrl, error: $error, isPresented: $isPresented)
                             }, label: {
                                 AsyncImage(url: photoThumbnailUrl(from: photo.baseUrl), content: { image in
                                     image

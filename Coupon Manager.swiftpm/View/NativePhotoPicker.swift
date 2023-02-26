@@ -18,10 +18,31 @@ struct NativePhotoPicker: ViewModifier {
     @Binding var selectedImage: UIImage?
     @Binding var error: Error?
     
+    private var isShowingBarcodeSelectionView: Binding<Bool> {
+        Binding(get: {
+            selectedImage != nil
+        }, set: { newValue in
+            if !newValue {
+                selectedImage = nil
+            }
+        })
+    }
+    
     func body(content: Content) -> some View {
         content
             .sheet(isPresented: $isPresented) {
-                NativePhotoPickerRepresentable(selectedImage: $selectedImage, error: $error)
+                CompatibilityNavigationStack {
+                    CompatibilityNavigationLink(mainBody: {
+                        NativePhotoPickerRepresentable(selectedImage: $selectedImage, error: $error)
+                    }, destination: {
+                        BarcodeSelectionView(localImage: $selectedImage, url: nil, error: $error, isPresented: $isPresented)
+                    }, isPresented: isShowingBarcodeSelectionView)
+                }
+            }
+            .onChange(of: isPresented) { isPresentedStatus in
+                if isPresentedStatus == false {
+                    isShowingBarcodeSelectionView.wrappedValue = false
+                }
             }
     }
 }
