@@ -19,6 +19,7 @@ struct NativePhotoPickerRepresentable: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var configuration = PHPickerConfiguration()
         configuration.filter = .images
+        configuration.selectionLimit = 1
         
         let vc = PHPickerViewController(configuration: configuration)
         vc.delegate = context.coordinator
@@ -42,6 +43,11 @@ struct NativePhotoPickerRepresentable: UIViewControllerRepresentable {
         }
         
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            guard results.isEmpty == false else {
+                picker.dismiss(animated: true)
+                return
+            }
+            
             let loadableResults = results.filter({ $0.itemProvider.canLoadObject(ofClass: UIImage.self) })
             guard let firstResult = loadableResults.first else {
                 return
