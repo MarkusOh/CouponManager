@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 struct SnackBarView: View {
     @Binding var isShowing: Bool
@@ -33,13 +34,16 @@ struct SnackBarView: View {
             .background(Color.accentColor.opacity(0.5))
             .foregroundColor(Color.white)
             .cornerRadius(10)
-            .shadow(radius: isShowing ? 15 : 0)
+            .padding()
+            .shadow(radius: 15)
+            .opacity(isShowing ? 1 : 0)
             .offset(y: isShowing ? 0 : 150)
             .animation(.spring(), value: isShowing)
-            .padding()
             .onChange(of: isShowing) { showStatus in
                 guard showStatus else { return }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                
+                Task { @MainActor in
+                    try await Task.sleep(nanoseconds: 3000000000)
                     isShowing.toggle()
                 }
             }
