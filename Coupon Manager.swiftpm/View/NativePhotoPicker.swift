@@ -35,7 +35,7 @@ struct NativePhotoPicker: ViewModifier {
                     CompatibilityNavigationLink(mainBody: {
                         NativePhotoPickerRepresentable(selectedImage: $selectedImage, error: $error)
                     }, destination: {
-                        BarcodeSelectionView(localImage: $selectedImage, url: nil, error: $error, isPresented: $isPresented)
+                        BarcodeSelectionView(localImage: selectedImage, url: nil, error: $error, isPresented: $isPresented)
                     }, isPresented: isShowingBarcodeSelectionView)
                 }
             }

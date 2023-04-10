@@ -15,7 +15,7 @@ enum BarcodeSelectionViewError: Error {
 struct BarcodeSelectionView: View {
     @State private var image: UIImage?
     
-    @Binding var localImage: UIImage?
+    let localImage: UIImage?
     let url: URL?
     
     @Binding var error: Error?
@@ -46,6 +46,7 @@ struct BarcodeSelectionView: View {
         .onAppear {
             if let localImage = localImage {
                 image = localImage
+                detectAllBoundingBoxFromImage(image: localImage)
             } else if let url = url {
                 handleSelectedImage(imageUrl: url)
             }
@@ -120,6 +121,6 @@ struct BarcodeSelectionView: View {
 
 struct BarcodeSelectionView_Previews: PreviewProvider {
     static var previews: some View {
-        BarcodeSelectionView(localImage: .constant(nil), url: nil, error: .constant(nil), isPresented: .constant(true))
+        BarcodeSelectionView(localImage: nil, url: nil, error: .constant(nil), isPresented: .constant(true))
     }
 }
