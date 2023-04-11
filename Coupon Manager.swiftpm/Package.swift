@@ -16,8 +16,8 @@ let package = Package(
         .iOSApplication(
             name: "Coupon Manager",
             targets: ["AppModule"],
-            bundleIdentifier: "com.seungsub.CouponManager",
-            teamIdentifier: "MWF8UC94P5",
+            bundleIdentifier: "com.seungsuboh.CouponManager",
+            teamIdentifier: "UM34485SJG",
             displayVersion: "1.0",
             bundleVersion: "1",
             appIcon: .asset("AppIcon"),
