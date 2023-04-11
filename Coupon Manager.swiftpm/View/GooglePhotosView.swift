@@ -17,16 +17,7 @@ struct GooglePhotosView: View {
     @ObservedObject var photosProvider = GooglePhotosDataProvider.shared
     
     @State private var loginError: Error? = nil
-    
-    private var isShowingError: Binding<Bool> {
-        Binding(get: {
-            loginError != nil
-        }, set: { newValue in
-            if !newValue {
-                loginError = nil
-            }
-        })
-    }
+    @State private var errorMessagePositionOffset: Double = 0
     
     @Binding var isPresented: Bool
     @Binding var error: Error?
@@ -40,7 +31,31 @@ struct GooglePhotosView: View {
                     authenticationView
                 }
                 
-                SnackBarView(isShowing: isShowingError, title: "아이구! 로그인 중 에러가 있었습니다", message: loginError?.localizedDescription ?? "에러가 없습니다")
+                if loginError != nil {
+                    GeometryReader { geo in
+                        VStack {
+                            Spacer()
+                                .frame(height: geo.size.height - errorMessagePositionOffset)
+                                .task { @MainActor in
+                                    withAnimation(.spring(blendDuration: 0.5)) {
+                                        errorMessagePositionOffset = 150
+                                    }
+                                    
+                                    try! await Task.sleep(nanoseconds: 3_000_000_000)
+                                    
+                                    withAnimation(.spring(blendDuration: 0.5)) {
+                                        errorMessagePositionOffset = 0
+                                    }
+                                    
+                                    try! await Task.sleep(nanoseconds: 500_000_000)
+                                    
+                                    loginError = nil
+                                }
+                            SnackBarView(title: "아이구! 로그인 중 에러가 있었습니다", message: loginError?.localizedDescription ?? "에러가 없습니다")
+                                .opacity(errorMessagePositionOffset / 150)
+                        }
+                    }
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading, content: {
