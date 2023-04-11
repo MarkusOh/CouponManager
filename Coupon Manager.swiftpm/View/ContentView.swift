@@ -100,9 +100,9 @@ extension ContentView {
                     Button("카메라") {
                         isShowingScanner.toggle()
                     }
-                    Button("Google Photos", action: {
-                        isShowingGooglePhotosView.toggle()
-                    })
+//                    Button("Google Photos", action: {
+//                        isShowingGooglePhotosView.toggle()
+//                    })
                 } label: {
                     Image(systemName: "plus")
                 }
