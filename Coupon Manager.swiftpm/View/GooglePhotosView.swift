@@ -22,6 +22,16 @@ struct GooglePhotosView: View {
     @Binding var isPresented: Bool
     @Binding var error: Error?
     
+    private var isShowingError: Binding<Bool> {
+            Binding(get: {
+                loginError != nil
+            }, set: { newValue in
+                if !newValue {
+                    loginError = nil
+                }
+            })
+        }
+    
     var body: some View {
         CompatibilityNavigationStack {
             ZStack {
@@ -31,31 +41,7 @@ struct GooglePhotosView: View {
                     authenticationView
                 }
                 
-                if loginError != nil {
-                    GeometryReader { geo in
-                        VStack {
-                            Spacer()
-                                .frame(height: geo.size.height - errorMessagePositionOffset)
-                                .task { @MainActor in
-                                    withAnimation(.spring(blendDuration: 0.5)) {
-                                        errorMessagePositionOffset = 150
-                                    }
-                                    
-                                    try! await Task.sleep(nanoseconds: 3_000_000_000)
-                                    
-                                    withAnimation(.spring(blendDuration: 0.5)) {
-                                        errorMessagePositionOffset = 0
-                                    }
-                                    
-                                    try! await Task.sleep(nanoseconds: 500_000_000)
-                                    
-                                    loginError = nil
-                                }
-                            SnackBarView(title: "아이구! 로그인 중 에러가 있었습니다", message: loginError?.localizedDescription ?? "에러가 없습니다")
-                                .opacity(errorMessagePositionOffset / 150)
-                        }
-                    }
-                }
+                SnackBarView(title: loginError != nil ? "아이구! 로그인 중 에러가 있었습니다" : nil, message: loginError?.localizedDescription, isPresented: isShowingError)
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading, content: {
