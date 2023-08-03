@@ -7,7 +7,7 @@ struct CameraView: View {
     @Binding var isPresented: Bool
     
     var body: some View {
-        CompatibilityNavigationStack {
+        NavigationStack {
             cameraView
                 .navigationTitle("카메라")
                 .navigationBarTitleDisplayMode(.inline)

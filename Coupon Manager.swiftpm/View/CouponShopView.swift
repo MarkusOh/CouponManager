@@ -22,7 +22,7 @@ struct CouponShopView: View {
     }
     
     var body: some View {
-        CompatibilityNavigationStack {
+        NavigationStack {
             VStack {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack {

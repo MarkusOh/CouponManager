@@ -37,7 +37,7 @@ class FrameHandler: NSObject, ObservableObject {
             .removeDuplicates()
         
         Task { [weak self] in
-            guard await checkPermission() else { return }
+            guard await self?.checkPermission() ?? false else { return }
             self?.setupCaptureSession()
             self?.captureSession.startRunning()
             

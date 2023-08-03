@@ -1,7 +1,6 @@
 import AVFoundation
 import PhotosUI
 import SwiftUI
-import GoogleSignIn
 
 enum ContentViewError: Error {
     case dataToUIImageFail
@@ -24,8 +23,6 @@ struct ContentView: View {
     
     @StateObject var dataProvider = CouponDataProvider.shared
     
-    @State private var isShowingGooglePhotosView = false
-    
     @State private var selectedPhoto: UIImage? = nil
     
     private var isShowingError: Binding<Bool> {
@@ -39,11 +36,10 @@ struct ContentView: View {
     }
     
     var body: some View {
-        CompatibilityNavigationStack {
+        NavigationStack {
             barcodeList
         }
         .modifier(ErrorAlert(isShowingError: isShowingError, error: error ?? ContentViewError.noError))
-        .googlePhotosPicker(isPresented: $isShowingGooglePhotosView, selectedPhoto: $selectedPhoto, error: $error)
         .nativePhotoPicker(isPresented: $isShowingPhotoPicker, selectedImage: $selectedPhoto, error: $error)
         .cameraView(isPresented: $isShowingScanner, couponCode: $couponCode, couponBarcodeType: $couponBarcodeType)
         .couponShop(isPresented: $isShowingCouponShop)
@@ -100,9 +96,6 @@ extension ContentView {
                     Button("카메라") {
                         isShowingScanner.toggle()
                     }
-//                    Button("Google Photos", action: {
-//                        isShowingGooglePhotosView.toggle()
-//                    })
                 } label: {
                     Image(systemName: "plus")
                 }

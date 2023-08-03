@@ -13,6 +13,28 @@ enum NativePhotoPickerError: Error {
     case imageUnavailable
 }
 
+struct NativePhotoPickerLayout: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+    
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let columns: Double
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            columns = 3
+        } else {
+            columns = 5
+        }
+        
+        for (index, subview) in subviews.enumerated() {
+            let sideLength = bounds.size.width / columns
+            
+            let viewSize = subview.sizeThatFits(ProposedViewSize(width: sideLength, height: sideLength))
+            subview.place(at: <#T##CGPoint#>, anchor: <#T##UnitPoint#>, proposal: <#T##ProposedViewSize#>)
+        }
+    }
+}
+
 struct NativePhotoPicker: ViewModifier {
     @Binding var isPresented: Bool
     @Binding var selectedImage: UIImage?
@@ -31,12 +53,9 @@ struct NativePhotoPicker: ViewModifier {
     func body(content: Content) -> some View {
         content
             .sheet(isPresented: $isPresented) {
-                CompatibilityNavigationStack {
-                    CompatibilityNavigationLink(mainBody: {
-                        NativePhotoPickerRepresentable(selectedImage: $selectedImage, error: $error)
-                    }, destination: {
-                        BarcodeSelectionView(localImage: selectedImage, url: nil, error: $error, isPresented: $isPresented)
-                    }, isPresented: isShowingBarcodeSelectionView)
+                NavigationStack {
+                    
+                    NativePhotoPickerRepresentable(selectedImage: $selectedImage, error: $error)
                 }
             }
             .onChange(of: isPresented) { isPresentedStatus in

@@ -10,14 +10,14 @@ import AppleProductTypes
 let package = Package(
     name: "Coupon Manager",
     platforms: [
-        .iOS("15.0")
+        .iOS("16.0")
     ],
     products: [
         .iOSApplication(
             name: "Coupon Manager",
             targets: ["AppModule"],
             bundleIdentifier: "com.seungsuboh.CouponManager",
-            teamIdentifier: "UM34485SJG",
+            teamIdentifier: "MWF8UC94P5",
             displayVersion: "1.0",
             bundleVersion: "1",
             appIcon: .asset("AppIcon"),
@@ -39,16 +39,9 @@ let package = Package(
             additionalInfoPlistContentFilePath: "MoreInfo.plist"
         )
     ],
-    dependencies: [
-        .package(url: "https://github.com/google/GoogleSignIn-iOS", "7.0.0"..<"8.0.0")
-    ],
     targets: [
         .executableTarget(
             name: "AppModule",
-            dependencies: [
-                .product(name: "GoogleSignIn", package: "googlesignin-ios"),
-                .product(name: "GoogleSignInSwift", package: "googlesignin-ios")
-            ],
             path: ".",
             exclude: ["./MoreInfo.plist"]
         )
